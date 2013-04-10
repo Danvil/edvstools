@@ -19,7 +19,7 @@ const QRgb cColorMid = qRgb(128, 128, 128);
 const QRgb cColorOn = qRgb(255, 255, 255);
 const QRgb cColorOff = qRgb(0, 0, 0);
 
-EdvsVisual::EdvsVisual(const boost::shared_ptr<Edvs::Device>& device, QWidget *parent)
+EdvsVisual::EdvsVisual(const Edvs::DeviceHandle& dh, QWidget *parent)
     : QWidget(parent)
 {
 	ui.setupUi(this);
@@ -31,14 +31,13 @@ EdvsVisual::EdvsVisual(const boost::shared_ptr<Edvs::Device>& device, QWidget *p
 	timer_.start();
 
 	// start capture
-	capture_ = Edvs::RunEventCapture(device,
+	edvs_device_handle_ = dh;
+	Edvs::RunEventCapture(edvs_device_handle_,
 		boost::bind(&EdvsVisual::OnEvent, this, _1));
 }
 
 EdvsVisual::~EdvsVisual()
 {
-	// stop capture
-	capture_.reset();
 }
 
 void EdvsVisual::OnEvent(const std::vector<Edvs::RawEvent>& newevents)

@@ -5,18 +5,22 @@
 
 namespace Edvs
 {
-	boost::shared_ptr<Device> CreateSerialDevice(Baudrate br, std::string port)
+	DeviceHandle CreateSerialDevice(Baudrate br, std::string port)
 	{
-		return boost::shared_ptr<Device>(new SerialPort(br, port));
+		DeviceHandle h;
+		h.device.reset(new SerialPort(br, port));
+		return h;
 	}
 
-	boost::shared_ptr<Device> CreateNetworkDevice(const std::string& address)
+	DeviceHandle CreateNetworkDevice(const std::string& address)
 	{
-		return boost::shared_ptr<Device>(new NetSocket(address));
+		DeviceHandle h;
+		h.device.reset(new NetSocket(address));
+		return h;
 	}
 
-	EventCapture::EventCapture(const boost::shared_ptr<Device>& device, EventCallbackType f, size_t buffer_size)
+	void RunEventCapture(DeviceHandle& handle, EventCallbackType callback, size_t buffer_size)
 	{
-		capture_.reset(new EventCaptureImpl(device, f, buffer_size));
+		handle.capture_impl.reset(new EventCaptureImpl(handle.device, callback, buffer_size));
 	}
 }

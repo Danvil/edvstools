@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	boost::shared_ptr<Edvs::Device> device;
+	Edvs::DeviceHandle device;
 	if(p_device == "net") {
 		std::cout << "Connecting via network socket '" << p_link << "'" << std::endl;
 		device = Edvs::CreateNetworkDevice(p_link);

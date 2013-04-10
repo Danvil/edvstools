@@ -66,14 +66,14 @@ namespace Edvs
 		/** Writes a command string to the serial port
 		 * Warning: Command string must end with a '\n'!
 		 */
-		void WriteCommand(const std::string& str) {
+		void sendCommand(const std::string& str) {
 			int n = ::write(port_, str.c_str(), str.length());
 			if(n != (int)str.length()) {
 				throw IOException("Could not write correct number of bytes!");
 			}
 		}
 		/** Reads some data from the serial port */
-		size_t ReadBinaryData(size_t n, char* data) {
+		size_t read(size_t n, char* data) {
 			ssize_t actual = ::read(port_, data, n);
 			if(actual < 0) {
 				throw IOException("Could not read from port!");

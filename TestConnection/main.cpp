@@ -88,14 +88,14 @@ int main(int argc, char* argv[])
 		p_measure_speed = false;
 	}
 
-	boost::shared_ptr<Edvs::Device> device;
+	Edvs::DeviceHandle dh;
 	if(p_device == "net") {
 		std::cout << "Connecting via network socket '" << p_link << "'" << std::endl;
-		device = Edvs::CreateNetworkDevice(p_link);
+		dh = Edvs::CreateNetworkDevice(p_link);
 	}
 	else if(p_device == "serial") {
 		std::cout << "Connecting via serial port '" << p_link << "'" << std::endl;
-		device = Edvs::CreateSerialDevice(p_baudrate, p_link);
+		dh = Edvs::CreateSerialDevice(p_baudrate, p_link);
 	}
 	else {
 		std::cerr << "Unknown device type! Supported are 'net' and 'serial'." << std::endl;
@@ -103,7 +103,7 @@ int main(int argc, char* argv[])
 	}
 
 	std::cout << "Running event capture ..." << std::endl;
-	auto capture = Edvs::RunEventCapture(device,
+	Edvs::RunEventCapture(dh,
 		boost::bind(OnEvent, _1, p_show_events, p_measure_speed));
 
 	// user input loop - press q to quit
@@ -112,7 +112,7 @@ int main(int argc, char* argv[])
 		// read command
 		std::cin >> str;
 		// send command to sensor
-		device->WriteCommand(str + "\n");
+		dh.device->sendCommand(str + "\n");
 	}
 
 	return 1;

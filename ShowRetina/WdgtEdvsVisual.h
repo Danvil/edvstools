@@ -13,7 +13,7 @@ class EdvsVisual : public QWidget
     Q_OBJECT
 
 public:
-	EdvsVisual(const boost::shared_ptr<Edvs::Device>& device, QWidget *parent = 0);
+	EdvsVisual(const Edvs::DeviceHandle& dh, QWidget *parent = 0);
 	~EdvsVisual();
 
 	void OnEvent(const std::vector<Edvs::RawEvent>& events);
@@ -22,7 +22,7 @@ public Q_SLOTS:
 	void Update();
 
 private:
-	boost::shared_ptr<Edvs::EventCapture> capture_;
+	Edvs::DeviceHandle edvs_device_handle_;
 	std::vector<Edvs::RawEvent> events_;
 	boost::mutex events_mtx_;
 	QTimer timer_;

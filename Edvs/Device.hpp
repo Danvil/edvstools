@@ -14,10 +14,10 @@ namespace Edvs
 		/** Writes a command string to the socket
 		 * Warning: Command string must end with a '\n'!
 		 */
-		virtual void WriteCommand(const std::string& str) = 0;
+		virtual void sendCommand(const std::string& str) = 0;
 
 		/** Reads some data from the serial port */
-		virtual size_t ReadBinaryData(size_t n, char* data) = 0;
+		virtual size_t read(size_t n, char* data) = 0;
 	};
 
 }

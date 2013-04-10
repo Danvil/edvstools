@@ -37,18 +37,18 @@ namespace Edvs
 			}
 			// E0: no timestamps, E1: 16 bit timestamps, E2: 24 bit timestamps
 			if(cTimestampMode == 1) {
-				device_->WriteCommand("!E1\n");
+				device_->sendCommand("!E1\n");
 			}
 			else if(cTimestampMode == 2) {
-				device_->WriteCommand("!E2\n");
+				device_->sendCommand("!E2\n");
 			}
 			else if(cTimestampMode == 3) {
-				device_->WriteCommand("!E3\n");
+				device_->sendCommand("!E3\n");
 			}
 			else {
-				device_->WriteCommand("!E0\n");
+				device_->sendCommand("!E0\n");
 			}
-			device_->WriteCommand("E+\n");
+			device_->sendCommand("E+\n");
 			running_ = true;
 			thread_ = boost::thread(&Edvs::EventCaptureImpl::Run, this);
 		}
@@ -70,14 +70,14 @@ namespace Edvs
 				size_t bytes_read = 0;
 				// if(cEnableFillRead) {
 				// 	while(bytes_read < buffer_size_) {
-				// 		size_t n = device_->ReadBinaryData(buffer_size_ - bytes_read, (char*)buffer + bytes_read);
+				// 		size_t n = device_->read(buffer_size_ - bytes_read, (char*)buffer + bytes_read);
 				// 		bytes_read += n;
 				// 		if(n == 0) {
 				// 			break;
 				// 		}
 				// 	}
 				// } else {
-					bytes_read = device_->ReadBinaryData(buffer_size_, (char*)buffer + buffer_offset) + buffer_offset;
+					bytes_read = device_->read(buffer_size_, (char*)buffer + buffer_offset) + buffer_offset;
 				// }
 				buffA->clear();
 				size_t i = 0; // index of current byte
@@ -142,7 +142,7 @@ namespace Edvs
 		void StopEventCapture() {
 			running_ = false;
 			thread_.join();
-			device_->WriteCommand("E-\n");
+			device_->sendCommand("E-\n");
 		}
 
 	private:

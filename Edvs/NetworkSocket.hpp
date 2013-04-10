@@ -67,7 +67,7 @@ namespace Edvs
 		/** Writes a command string to the socket
 		 * Warning: Command string must end with a '\n'!
 		 */
-		void WriteCommand(const std::string& str) {
+		void sendCommand(const std::string& str) {
 
 			int n = send(sockfd_, str.c_str(), str.length(), 0);
 			if(n != (int)str.length()) {
@@ -76,7 +76,7 @@ namespace Edvs
 		}
 
 		/** Reads some data from the socket */
-		size_t ReadBinaryData(size_t n, char* data) {
+		size_t read(size_t n, char* data) {
 			ssize_t actual = recv(sockfd_, data, n, 0);
 			if(actual < 0) {
 				throw Exception("Could not read from socket!");
