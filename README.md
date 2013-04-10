@@ -1,8 +1,4 @@
-Tools for the Embedded Dynamic Vision Sensor
-====
-
-Overview
-----
+# Tools for the Embedded Dynamic Vision Sensor
 
 This library is a collection of small tools for the embedded dynamic vision sensor.
 
@@ -16,10 +12,9 @@ This library is a collection of small tools for the embedded dynamic vision sens
 * EventVideoGenerator: Generates a video from a saved event file
 
 
-Installation
-----
+# Installation
 
-### Requirements
+## Requirements
 
 * [Boost](http://www.boost.org/) 1.46.1 or higher: `sudo apt-get install libboost-all-dev`
 * [Eigen](http://eigen.tuxfamily.org) 3.x: `sudo apt-get install libeigen3-dev`
@@ -28,7 +23,7 @@ Installation
 
 All apt-get dependencies in one line: *sudo apt-get install libboost-all-dev libeigen3-dev libqt4-dev g++ build-essential cmake cmake-qt-gui*
 
-### Installation Instructions
+## Installation Instructions
 
 1. `git clone git://github.com/Danvil/edvstools.git`
 2. `cd edvstools; mkdir build; cd build`
@@ -36,8 +31,19 @@ All apt-get dependencies in one line: *sudo apt-get install libboost-all-dev lib
 4. `make`
 
 
-Using the library
-----
+# Usage
+
+## Using the tools
+
+To connect to the eDVS sensor over network and display events
+
+	ShowRetina/ShowRetina --device net --address 192.168.201.62:56001
+
+To connect to the eDVS sensor over serial port and display events
+
+	ShowRetina/ShowRetina --device serial --port "/dev/ttyUSB0"
+
+## Using the library in one of your own projects
 
 Below is a small sample which demonstrates the usage of the edvs connection
 
