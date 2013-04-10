@@ -1,0 +1,10 @@
+PROJECT(EdvsTest)
+
+ADD_EXECUTABLE(${PROJECT_NAME}
+	main.cpp
+)
+
+TARGET_LINK_LIBRARIES(${PROJECT_NAME}
+	boost_thread
+)
+
