@@ -37,11 +37,11 @@ All apt-get dependencies in one line: `sudo apt-get install libboost-all-dev lib
 
 To connect to the eDVS sensor over network and display events
 
-	ShowRetina/ShowRetina --device net --address 192.168.201.62:56001
+	ShowRetina/ShowRetina --device net --link 192.168.201.62:56001
 
 To connect to the eDVS sensor over serial port and display events
 
-	ShowRetina/ShowRetina --device serial --port /dev/ttyUSB0
+	ShowRetina/ShowRetina --device serial --link /dev/ttyUSB0
 
 ## Using the library in one of your own projects
 
