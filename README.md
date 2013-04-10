@@ -21,7 +21,7 @@ This library is a collection of small tools for the embedded dynamic vision sens
 * [Qt](http://qt.nokia.com/) 4.x: `sudo apt-get install libqt4-dev`
 * Build essentials: `sudo apt-get install g++ build-essential cmake cmake-qt-gui`
 
-All apt-get dependencies in one line: *sudo apt-get install libboost-all-dev libeigen3-dev libqt4-dev g++ build-essential cmake cmake-qt-gui*
+All apt-get dependencies in one line: `sudo apt-get install libboost-all-dev libeigen3-dev libqt4-dev g++ build-essential cmake cmake-qt-gui`
 
 ## Installation Instructions
 
@@ -33,7 +33,7 @@ All apt-get dependencies in one line: *sudo apt-get install libboost-all-dev lib
 
 # Usage
 
-## Using the tools
+## Displaying events
 
 To connect to the eDVS sensor over network and display events
 
@@ -41,7 +41,7 @@ To connect to the eDVS sensor over network and display events
 
 To connect to the eDVS sensor over serial port and display events
 
-	ShowRetina/ShowRetina --device serial --port "/dev/ttyUSB0"
+	ShowRetina/ShowRetina --device serial --port /dev/ttyUSB0
 
 ## Using the library in one of your own projects
 
@@ -61,6 +61,7 @@ Below is a small sample which demonstrates the usage of the edvs connection
 		std::cout << std::endl;
 	}
 
+	// main loop
 	int main(int argc, char* argv[])
 	{
 		// run capture
