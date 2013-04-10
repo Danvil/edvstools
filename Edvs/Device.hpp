@@ -10,6 +10,7 @@ namespace Edvs
 	{
 	public:
 		virtual ~Device() {}
+
 		/** Writes a command string to the socket
 		 * Warning: Command string must end with a '\n'!
 		 */

@@ -3,6 +3,9 @@
 	[
 		{
 			"path": "/home/david/git/edvstools"
+		},
+		{
+			"path": "edvs"
 		}
 	]
 }

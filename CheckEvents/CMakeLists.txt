@@ -1,4 +1,4 @@
-PROJECT(ConvertEvents)
+PROJECT(CheckEvents)
 
 INCLUDE_DIRECTORIES(
 	${edvstools_SOURCE_DIR}

@@ -8,7 +8,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <cstring>
-#include "Device.h"
+#include "Device.hpp"
 
 namespace Edvs
 {

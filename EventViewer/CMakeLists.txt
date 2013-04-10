@@ -1,8 +1,9 @@
+PROJECT(EventViewer)
+
 find_package(Qt4 REQUIRED)
 
-include_directories(
-	${EIGEN_INCLUDE_DIR}
-	${EdvsTools_SOURCE_DIR}
+INCLUDE_DIRECTORIES(
+	${Edvs_SOURCE_DIR}
 )
 
 SET(QT_USE_QTOPENGL TRUE)
@@ -28,7 +29,7 @@ INCLUDE(${QT_USE_FILE})
 
 ADD_DEFINITIONS(${QT_DEFINITIONS} -DQT_NO_KEYWORDS)
 
-ADD_EXECUTABLE(EventViewer
+ADD_EXECUTABLE(${PROJECT_NAME}
 	${EventViewer_SOURCES}
 	${EventViewer_HEADERS_MOC}
 	${EventViewer_FORMS_HEADERS}
@@ -36,9 +37,9 @@ ADD_EXECUTABLE(EventViewer
 
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR})
 
-TARGET_LINK_LIBRARIES(EventViewer
-	EdvsTools
-	boost_program_options
+TARGET_LINK_LIBRARIES(${PROJECT_NAME}
+	Edvs
 	${QT_LIBRARIES}
+	boost_program_options
 )
 

@@ -6,14 +6,10 @@
 #include <string>
 #include <fcntl.h>
 #include <termios.h>
-#include "Device.h"
+#include "Device.hpp"
 
 namespace Edvs
 {
-	enum Baudrate {
-		B921k, B1000k, B2000k, B4000k
-	};
-
 	/** Actual reading and writing to the port */
 	class SerialPort : public Device
 	{

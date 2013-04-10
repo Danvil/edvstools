@@ -1,8 +1,7 @@
-PROJECT(convert_matlab_events)
+PROJECT(TestConnection)
 
-include_directories(
-	${EIGEN_INCLUDE_DIR}
-	${EdvsTools_SOURCE_DIR}
+INCLUDE_DIRECTORIES(
+	${edvstools_SOURCE_DIR}
 )
 
 ADD_EXECUTABLE(${PROJECT_NAME}
@@ -10,6 +9,6 @@ ADD_EXECUTABLE(${PROJECT_NAME}
 )
 
 TARGET_LINK_LIBRARIES(${PROJECT_NAME}
-	EdvsTools
+	Edvs
 	boost_program_options
 )
