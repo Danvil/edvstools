@@ -19,7 +19,7 @@ namespace Edvs
 		bool parity;
 
 		friend inline std::ostream& operator<<(std::ostream& os, const Edvs::RawEvent& e) {
-			os << "[t=" << e.time << ", p=" << e.parity << ", x=(" << static_cast<int>(e.x) << ", " << static_cast<int>(e.y) << ")]";
+			os << "[t=" << e.time << ", p=" << e.parity << ", (" << static_cast<int>(e.x) << ", " << static_cast<int>(e.y) << ")]";
 			return os;
 		}
 
@@ -40,7 +40,7 @@ namespace Edvs
 		bool parity;
 
 		friend inline std::ostream& operator<<(std::ostream& os, const Edvs::Event& e) {
-			os << "[t=" << e.time << ", id=" << e.id << ", p=" << e.parity << ", x=(" << e.x << ", " << e.y << ")]";
+			os << "[t=" << e.time << ", id=" << e.id << ", p=" << e.parity << ", (" << e.x << ", " << e.y << ")]";
 			return os;
 		}
 

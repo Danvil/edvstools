@@ -34,7 +34,7 @@ namespace Edvs
 	 * @param port Link to serial port, e.g. /dev/ttyUSB0
 	 * @return link to device
 	 */
-	DeviceHandle CreateSerialDevice(Baudrate baudrate, std::string port="/dev/ttyUSB0");
+	DeviceHandle OpenSerialDevice(Baudrate baudrate, std::string port="/dev/ttyUSB0");
 
 	/** Edvs connection over network socket
 	 * Please assure that you now how shared_ptr works!
@@ -42,7 +42,7 @@ namespace Edvs
 	 * @param address Edvs network addresse of the form ip:port
 	 * @return link to device
 	 */
-	DeviceHandle CreateNetworkDevice(const std::string& address);
+	DeviceHandle OpenNetworkDevice(const std::string& address);
 
 	/** Type of event callback function */
 	typedef boost::function<void(const std::vector<RawEvent>&)> EventCallbackType;
@@ -59,7 +59,7 @@ namespace Edvs
 	 * @param callback Edvs callback function
 	 * @param buffer_size Maximum bytes to read from the device at once
 	 */
-	void RunEventCapture(DeviceHandle& handle, EventCallbackType callback, size_t buffer_size = 8192);
+	void StartEventCapture(DeviceHandle& handle, EventCallbackType callback, size_t buffer_size = 8192);
 
 }
 

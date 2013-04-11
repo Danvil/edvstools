@@ -32,7 +32,7 @@ EdvsVisual::EdvsVisual(const Edvs::DeviceHandle& dh, QWidget *parent)
 
 	// start capture
 	edvs_device_handle_ = dh;
-	Edvs::RunEventCapture(edvs_device_handle_,
+	Edvs::StartEventCapture(edvs_device_handle_,
 		boost::bind(&EdvsVisual::OnEvent, this, _1));
 }
 

@@ -65,9 +65,8 @@ Below is a small sample which demonstrates the usage of the edvs connection
 	int main(int argc, char* argv[])
 	{
 		// run capture
-		Edvs::DeviceHandle dh = Edvs::CreateNetworkDevice("192.168.201.62:56001");
-		Edvs::RunEventCapture(dh,
-			boost::bind(OnEvent, _1, p_show_events, p_measure_speed));
+		Edvs::DeviceHandle dh = Edvs::OpenNetworkDevice("192.168.201.62:56001");
+		Edvs::StartEventCapture(dh, &OnEvent);
 		// press q to quit
 		std::string str;
 		while(str != "q") {

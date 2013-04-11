@@ -5,21 +5,21 @@
 
 namespace Edvs
 {
-	DeviceHandle CreateSerialDevice(Baudrate br, std::string port)
+	DeviceHandle OpenSerialDevice(Baudrate br, std::string port)
 	{
 		DeviceHandle h;
 		h.device.reset(new SerialPort(br, port));
 		return h;
 	}
 
-	DeviceHandle CreateNetworkDevice(const std::string& address)
+	DeviceHandle OpenNetworkDevice(const std::string& address)
 	{
 		DeviceHandle h;
 		h.device.reset(new NetSocket(address));
 		return h;
 	}
 
-	void RunEventCapture(DeviceHandle& handle, EventCallbackType callback, size_t buffer_size)
+	void StartEventCapture(DeviceHandle& handle, EventCallbackType callback, size_t buffer_size)
 	{
 		handle.capture_impl.reset(new EventCaptureImpl(handle.device, callback, buffer_size));
 	}

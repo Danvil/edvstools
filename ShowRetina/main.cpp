@@ -31,11 +31,11 @@ int main(int argc, char *argv[])
 	Edvs::DeviceHandle device;
 	if(p_device == "net") {
 		std::cout << "Connecting via network socket '" << p_link << "'" << std::endl;
-		device = Edvs::CreateNetworkDevice(p_link);
+		device = Edvs::OpenNetworkDevice(p_link);
 	}
 	else if(p_device == "serial") {
 		std::cout << "Connecting via serial port '" << p_link << "'" << std::endl;
-		device = Edvs::CreateSerialDevice(p_baudrate, p_link);
+		device = Edvs::OpenSerialDevice(p_baudrate, p_link);
 	}
 	else {
 		std::cerr << "Unknown device type! Supported are 'net' and 'serial'." << std::endl;
