@@ -18,6 +18,8 @@ namespace Edvs
 		
 		void read(std::vector<RawEvent>& events);
 
+		bool eof() const { return false; }
+
 	private:
 		DeviceHandle device_;
 		std::vector<unsigned char> buffer_;

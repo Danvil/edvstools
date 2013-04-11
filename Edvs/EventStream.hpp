@@ -15,6 +15,8 @@ namespace Edvs
 
 		virtual void read(std::vector<RawEvent>& events) = 0;
 
+		virtual bool eof() const = 0;
+
 	};
 
 	typedef boost::shared_ptr<EventStream> EventStreamHandle;

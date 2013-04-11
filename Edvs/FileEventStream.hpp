@@ -15,6 +15,8 @@ namespace Edvs
 		
 		void read(std::vector<RawEvent>& events);
 
+		bool eof() const;
+
 	private:
 		std::vector<RawEvent> events_;
 		uint32_t fixed_dt_;

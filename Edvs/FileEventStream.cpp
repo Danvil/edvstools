@@ -19,6 +19,19 @@ FileEventStream::FileEventStream(const std::string& filename, uint32_t fixed_dt)
 	dt_actual = 0;
 }
 
+// 	time_t prev_time = time - dt;
+// //	std::cout << "time=" << time << ", dt=" << dt << ", prev_time" << prev_time << std::endl;
+// 	auto last = std::lower_bound(events_.begin(), events_.end(), prev_time, [](const Event& x, time_t q) {
+// 		return x.time < q;
+// 	});
+// //	auto last = std::find_if(events_.begin(), events_.end(), [prev_time](const Event& e) { return e.time > prev_time; });
+// 	if(last == events_.end()) {
+// 		return;
+// 	}
+// 	auto next = std::find_if(last, events_.end(), [time](const Event& e) { return e.time > time; });
+// //	std::cout << "Events: " << std::distance(last, next) << std::endl;
+
+
 void FileEventStream::read(std::vector<RawEvent>& events)
 {
 	// use a clock to find out how many events should be returned
@@ -56,6 +69,11 @@ void FileEventStream::read(std::vector<RawEvent>& events)
 	events.clear();
 	events.insert(events.begin(), last_event_, next);
 	last_event_ = next;
+}
+
+bool FileEventStream::eof() const
+{
+	return last_event_ == events_.end();
 }
 
 }
