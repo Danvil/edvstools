@@ -1,3 +1,4 @@
+#include <Edvs/EventStreamFactory.hpp>
 #include <Edvs/EventCapture.hpp>
 #include <boost/bind.hpp>
 #include <boost/program_options.hpp>
@@ -58,19 +59,16 @@ void OnEvent(const std::vector<Edvs::RawEvent>& events, bool show_events, bool m
 
 int main(int argc, char* argv[])
 {
-	std::string p_device = "";
-	std::string p_link = "192.168.201.62:56001"; // "/dev/ttyUSB0";
+	std::string p_uri = "";
 	bool p_show_events = false;
 	bool p_measure_speed = true;
-	Edvs::Baudrate p_baudrate = Edvs::B4000k;
 
 	namespace po = boost::program_options;
 	// Declare the supported options.
 	po::options_description desc("Allowed options");
 	desc.add_options()
 		("help", "produce help message")
-		("device", po::value(&p_device), "edvs connection type: 'net' or 'serial'")
-		("link", po::value(&p_link), "network addresse of edvs sensor or link to serial port")
+		("uri", po::value(&p_uri), "URI to event source (use help for more info)")
 		("verbose", "report all events on console")
 	;
 
@@ -80,6 +78,10 @@ int main(int argc, char* argv[])
 
 	if(vm.count("help")) {
 		std::cout << desc << std::endl;
+		std::cout << "URI type format:" << std::endl;
+		std::cout << "\tNetwork socket connection: IP:PORT, e.g. 192.168.201.62:56001" << std::endl;
+		std::cout << "\tSerial port connection: PORT or PORT?baudrate=BR, e.g. /dev/ttyUSB0 or /dev/ttyUSB0?baudrate=4000000" << std::endl;
+		std::cout << "\tRead from event file: /path/to/file" << std::endl;
 		return 1;
 	}
 
@@ -88,22 +90,11 @@ int main(int argc, char* argv[])
 		p_measure_speed = false;
 	}
 
-	Edvs::DeviceHandle dh;
-	if(p_device == "net") {
-		std::cout << "Connecting via network socket '" << p_link << "'" << std::endl;
-		dh = Edvs::OpenNetworkDevice(p_link);
-	}
-	else if(p_device == "serial") {
-		std::cout << "Connecting via serial port '" << p_link << "'" << std::endl;
-		dh = Edvs::OpenSerialDevice(p_baudrate, p_link);
-	}
-	else {
-		std::cerr << "Unknown device type! Supported are 'net' and 'serial'." << std::endl;
-		std::exit(0);
-	}
+	std::cout << "Opening event stream ..." << std::endl;
+	Edvs::EventStreamHandle stream = Edvs::OpenURI(p_uri);
 
 	std::cout << "Running event capture ..." << std::endl;
-	Edvs::StartEventCapture(dh,
+	Edvs::EventCaptureHandle capture = Edvs::RunEventCapture(stream,
 		boost::bind(OnEvent, _1, p_show_events, p_measure_speed));
 
 	// user input loop - press q to quit
@@ -111,8 +102,6 @@ int main(int argc, char* argv[])
 	while(str != "q") {
 		// read command
 		std::cin >> str;
-		// send command to sensor
-		dh.device->sendCommand(str + "\n");
 	}
 
 	return 1;

@@ -1,22 +1,19 @@
 #include "WdgtEdvsVisual.h"
-#include <Edvs/EventCapture.hpp>
+#include <Edvs/EventStreamFactory.hpp>
 #include <QtGui>
 #include <QApplication>
 #include <boost/program_options.hpp>
 
 int main(int argc, char *argv[])
 {
- 	std::string p_device = "";
-	std::string p_link = "192.168.201.62:56001"; // "/dev/ttyUSB0";
-	Edvs::Baudrate p_baudrate = Edvs::B4000k;
+	std::string p_uri = "";
 
 	namespace po = boost::program_options;
 	// Declare the supported options.
 	po::options_description desc("Allowed options");
 	desc.add_options()
 		("help", "produce help message")
-		("device", po::value(&p_device), "edvs connection type: 'net' or 'serial'")
-		("link", po::value(&p_link), "network addresse of edvs sensor or link to serial port")
+		("uri", po::value(&p_uri), "URI to event source (use help for more info)")
 	;
 
 	po::variables_map vm;
@@ -25,25 +22,17 @@ int main(int argc, char *argv[])
 
 	if(vm.count("help")) {
 		std::cout << desc << std::endl;
+		std::cout << "URI type format:" << std::endl;
+		std::cout << "\tNetwork socket connection: IP:PORT, e.g. 192.168.201.62:56001" << std::endl;
+		std::cout << "\tSerial port connection: PORT or PORT?baudrate=BR, e.g. /dev/ttyUSB0 or /dev/ttyUSB0?baudrate=4000000" << std::endl;
+		std::cout << "\tRead from event file: /path/to/file" << std::endl;
 		return 1;
 	}
 
-	Edvs::DeviceHandle device;
-	if(p_device == "net") {
-		std::cout << "Connecting via network socket '" << p_link << "'" << std::endl;
-		device = Edvs::OpenNetworkDevice(p_link);
-	}
-	else if(p_device == "serial") {
-		std::cout << "Connecting via serial port '" << p_link << "'" << std::endl;
-		device = Edvs::OpenSerialDevice(p_baudrate, p_link);
-	}
-	else {
-		std::cerr << "Unknown device type! Supported are 'net' and 'serial'." << std::endl;
-		std::exit(0);
-	}
+	Edvs::EventStreamHandle stream = Edvs::OpenURI(p_uri);
 
 	QApplication a(argc, argv);
-	EdvsVisual w(device);
+	EdvsVisual w(stream);
 	w.show();
 
 	return a.exec();

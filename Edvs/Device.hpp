@@ -1,6 +1,7 @@
 #ifndef INCLUDE_EDVS_DEVICE
 #define INCLUDE_EDVS_DEVICE
 
+#include <boost/shared_ptr.hpp>
 #include <string>
 
 namespace Edvs
@@ -19,6 +20,8 @@ namespace Edvs
 		/** Reads some data from the serial port */
 		virtual size_t read(size_t n, char* data) = 0;
 	};
+
+	typedef boost::shared_ptr<Device> DeviceHandle;
 
 }
 

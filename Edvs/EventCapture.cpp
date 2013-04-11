@@ -1,26 +1,31 @@
 #include "EventCapture.hpp"
-#include "EventCaptureImpl.hpp"
-#include "SerialPort.hpp"
-#include "NetworkSocket.hpp"
 
 namespace Edvs
 {
-	DeviceHandle OpenSerialDevice(Baudrate br, std::string port)
+	EventCapture::EventCapture(const EventStreamHandle& stream, EventCallbackType callback)
+	: stream_(stream), cb_(callback)
 	{
-		DeviceHandle h;
-		h.device.reset(new SerialPort(br, port));
-		return h;
+		running_ = true;
+		thread_ = boost::thread(&EventCapture::threadMain, this);
 	}
 
-	DeviceHandle OpenNetworkDevice(const std::string& address)
+	EventCapture::~EventCapture()
 	{
-		DeviceHandle h;
-		h.device.reset(new NetSocket(address));
-		return h;
+		running_ = false;
+		thread_.join();
 	}
 
-	void StartEventCapture(DeviceHandle& handle, EventCallbackType callback, size_t buffer_size)
+	void EventCapture::threadMain()
 	{
-		handle.capture_impl.reset(new EventCaptureImpl(handle.device, callback, buffer_size));
+		std::vector<RawEvent> buffer;
+		while(running_) {
+			stream_->read(buffer);
+			cb_(buffer);
+		}
+	}
+
+	EventCaptureHandle RunEventCapture(const EventStreamHandle& stream, EventCallbackType callback)
+	{
+		return EventCaptureHandle(new EventCapture(stream, callback));
 	}
 }

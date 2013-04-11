@@ -4,6 +4,7 @@
 #include <QtGui/QWidget>
 #include <QtCore/QTimer>
 #include "ui_WdgtEdvsVisual.h"
+#include <Edvs/EventStream.hpp>
 #include <Edvs/EventCapture.hpp>
 #include <boost/thread.hpp>
 #include <vector>
@@ -13,7 +14,7 @@ class EdvsVisual : public QWidget
     Q_OBJECT
 
 public:
-	EdvsVisual(const Edvs::DeviceHandle& dh, QWidget *parent = 0);
+	EdvsVisual(const Edvs::EventStreamHandle& dh, QWidget *parent = 0);
 	~EdvsVisual();
 
 	void OnEvent(const std::vector<Edvs::RawEvent>& events);
@@ -22,7 +23,8 @@ public Q_SLOTS:
 	void Update();
 
 private:
-	Edvs::DeviceHandle edvs_device_handle_;
+	Edvs::EventStreamHandle edvs_event_stream_;
+	Edvs::EventCaptureHandle edvs_event_capture_;
 	std::vector<Edvs::RawEvent> events_;
 	boost::mutex events_mtx_;
 	QTimer timer_;

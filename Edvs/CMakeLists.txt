@@ -1,7 +1,9 @@
 PROJECT(Edvs)
 
 ADD_LIBRARY(${PROJECT_NAME} SHARED
+	DeviceEventStream.cpp
 	EventCapture.cpp
+	EventStreamFactory.cpp
 	LoadSaveEvents.cpp
 )
 
