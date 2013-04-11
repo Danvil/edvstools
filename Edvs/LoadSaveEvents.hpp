@@ -15,6 +15,10 @@
 namespace Edvs
 {
 
+	std::vector<RawEvent> LoadRawEvents(const std::string& filename);
+
+	void SaveRawEvents(const std::string& filename, const std::vector<RawEvent>& events);
+
 	std::vector<Edvs::Event> LoadEventsMisc(const std::string& filename, unsigned int version);
 
 	namespace EventFileFlag
