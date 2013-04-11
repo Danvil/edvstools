@@ -32,12 +32,15 @@ std::vector<RawEvent> LoadRawEvents(const std::string& filename)
 		ifs.read((char*)buff, 6);
 		unsigned char a = buff[0];
 		unsigned char b = buff[1];
-		uint32_t timestamp = (buff[2] << 24) | (buff[3] << 16) | (buff[4] << 8) | buff[5];
+		uint32_t timestamp = (static_cast<uint32_t>(buff[2]) << 24)
+			| (static_cast<uint32_t>(buff[3]) << 16)
+			| (static_cast<uint32_t>(buff[4]) << 8)
+			| static_cast<uint32_t>(buff[5]);
 		RawEvent e;
 		e.time = timestamp;
 		e.x = b & cLowerBitsMask;
 		e.y = a & cLowerBitsMask;
-		e.parity = (b & cHighBitMask); // converts to bool
+		e.parity = (b & cHighBitMask);
 		events.push_back(e);
 	}
 	return events;
@@ -48,13 +51,13 @@ void SaveRawEvents(const std::string& filename, const std::vector<RawEvent>& eve
 	std::ofstream ofs(filename, std::ios::binary);
 	unsigned char buff[6];
 	for(const RawEvent& e : events) {
-		buff[0] = (e.y & cLowerBitsMask) | (e.parity ? cHighBitMask : 0);
-		buff[1] = e.x & cLowerBitsMask;
+		buff[0] = e.y & cLowerBitsMask;
+		buff[1] = (e.x & cLowerBitsMask) | (e.parity ? cHighBitMask : 0);
 		uint32_t timestamp = e.time;
-		buff[2] = (timestamp >> 24) & 0xFF;
-		buff[3] = (timestamp >> 16) & 0xFF;
-		buff[4] = (timestamp >> 8) & 0xFF;
-		buff[5] = timestamp & 0xFF;
+		buff[2] = static_cast<unsigned char>((timestamp >> 24) & 0xFF);
+		buff[3] = static_cast<unsigned char>((timestamp >> 16) & 0xFF);
+		buff[4] = static_cast<unsigned char>((timestamp >> 8) & 0xFF);
+		buff[5] = static_cast<unsigned char>(timestamp & 0xFF);
 		ofs.write((char*)buff, 6);
 	}
 }

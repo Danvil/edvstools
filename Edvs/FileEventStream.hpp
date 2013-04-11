@@ -18,8 +18,10 @@ namespace Edvs
 	private:
 		std::vector<RawEvent> events_;
 		uint32_t fixed_dt_;
-		std::vector<RawEvent>::const_iterator last_event_;
 		std::chrono::time_point<std::chrono::high_resolution_clock> last_time_;
+		std::vector<RawEvent>::const_iterator last_event_;
+		uint32_t last_event_time_;
+		int32_t dt_actual;
 	};
 }
 
