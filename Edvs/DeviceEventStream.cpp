@@ -10,7 +10,7 @@ namespace Edvs
 {
 	const bool cEnableFillRead = false;
 
-	const unsigned int cTimestampMode = 3;
+	const unsigned int cTimestampMode = 2;
 			
 	DeviceEventStream::DeviceEventStream(const DeviceHandle& device, size_t buffer_size)
 	: device_(device)
