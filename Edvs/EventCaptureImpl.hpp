@@ -14,7 +14,7 @@ namespace Edvs
 {
 	const bool cEnableFillRead = false;
 
-	const unsigned int cTimestampMode = 3;
+	const unsigned int cTimestampMode = 2;
 			
 	struct EventCaptureImpl
 	{
