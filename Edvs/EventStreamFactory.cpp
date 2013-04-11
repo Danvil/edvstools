@@ -2,6 +2,7 @@
 #include "DeviceEventStream.hpp"
 #include "SerialPort.hpp"
 #include "NetworkSocket.hpp"
+#include "FileEventStream.hpp"
 #include <boost/algorithm/string.hpp>
 
 namespace Edvs
@@ -30,7 +31,7 @@ namespace Edvs
 
 	EventStreamHandle OpenFileStream(const std::string& filename)
 	{
-		throw 0;
+		return EventStreamHandle(new FileEventStream(filename));
 	}
 
 	EventStreamHandle OpenURI(const std::string& uri)

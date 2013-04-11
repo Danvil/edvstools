@@ -17,6 +17,48 @@
 #include <string>
 #include <vector>
 
+namespace Edvs
+{
+
+const unsigned char cHighBitMask = 0x80; // 10000000
+const unsigned char cLowerBitsMask = 0x7F; // 01111111
+
+std::vector<RawEvent> LoadRawEvents(const std::string& filename)
+{
+	std::vector<RawEvent> events;
+	std::ifstream ifs(filename, std::ios::binary);
+	unsigned char buff[6];
+	while(!ifs.eof()) {
+		ifs.read((char*)buff, 6);
+		unsigned char a = buff[0];
+		unsigned char b = buff[1];
+		uint32_t timestamp = (buff[2] << 24) | (buff[3] << 16) | (buff[4] << 8) | buff[5];
+		RawEvent e;
+		e.time = timestamp;
+		e.x = b & cLowerBitsMask;
+		e.y = a & cLowerBitsMask;
+		e.parity = (b & cHighBitMask); // converts to bool
+		events.push_back(e);
+	}
+	return events;
+}
+
+void SaveRawEvents(const std::string& filename, const std::vector<RawEvent>& events)
+{
+	std::ofstream ofs(filename, std::ios::binary);
+	unsigned char buff[6];
+	for(const RawEvent& e : events) {
+		buff[0] = (e.y & cLowerBitsMask) | (e.parity ? cHighBitMask : 0);
+		buff[1] = e.x & cLowerBitsMask;
+		uint32_t timestamp = e.time;
+		buff[2] = (timestamp >> 24) & 0xFF;
+		buff[3] = (timestamp >> 16) & 0xFF;
+		buff[4] = (timestamp >> 8) & 0xFF;
+		buff[5] = timestamp & 0xFF;
+		ofs.write((char*)buff, 6);
+	}
+}
+
 struct EventLineEntry
 {
 	unsigned long time;
@@ -61,9 +103,9 @@ EventLineEntry ParseEventLine(const std::string& line, unsigned int version)
 	}
 }
 
-std::vector<Edvs::Event> Edvs::LoadEventsMisc(const std::string& filename, unsigned int version)
+std::vector<Event> LoadEventsMisc(const std::string& filename, unsigned int version)
 {
-	std::vector<Edvs::Event> events;
+	std::vector<Event> events;
 	std::ifstream is(filename.c_str());
 	std::string line;
 	events.clear();
@@ -79,12 +121,12 @@ std::vector<Edvs::Event> Edvs::LoadEventsMisc(const std::string& filename, unsig
 	return events;
 }
 
-bool isBinary(const std::string& filename, Edvs::EventFileFlags format)
+bool isBinary(const std::string& filename, EventFileFlags format)
 {
-	if(format & Edvs::EventFileFlag::Text) {
+	if(format & EventFileFlag::Text) {
 		return false;
 	}
-	else if(format & Edvs::EventFileFlags::Binary) {
+	else if(format & EventFileFlags::Binary) {
 		return true;
 	}
 	else {
@@ -131,10 +173,10 @@ inline uint64_t parse_timestamp_fast(StrIt it, const StrIt& end) {
 	return result;
 }
 
-std::vector<Edvs::Event> Edvs::LoadEvents(const std::string& filename, EventFileFlags flags)
+std::vector<Event> LoadEvents(const std::string& filename, EventFileFlags flags)
 {
 	bool fix_wrapped_timestamps = flags & EventFileFlag::UnwrapTimestamps;
-	std::vector<Edvs::Event> events;
+	std::vector<Event> events;
 	events.reserve(100000);
 	TimeUnroller unroller;
 	if(isBinary(filename, flags)) {
@@ -234,9 +276,9 @@ std::vector<Edvs::Event> Edvs::LoadEvents(const std::string& filename, EventFile
 	return events;
 }
 
-std::vector<Edvs::Event> Edvs::LoadEventsMatlab(const std::string& filename)
+std::vector<Event> LoadEventsMatlab(const std::string& filename)
 {
-	std::vector<Edvs::Event> events;
+	std::vector<Event> events;
 	events.reserve(100000);
 	std::ifstream is(filename);
 	std::string line;
@@ -259,11 +301,11 @@ std::vector<Edvs::Event> Edvs::LoadEventsMatlab(const std::string& filename)
 	return events;
 }
 
-void Edvs::SaveEvents(const std::vector<Edvs::Event>& events, const std::string& filename, EventFileFlags flags)
+void SaveEvents(const std::vector<Event>& events, const std::string& filename, EventFileFlags flags)
 {
 	if(isBinary(filename, flags)) {
 		std::ofstream ofs(filename, std::ios::binary);
-		for(const Edvs::Event& e : events) {
+		for(const Event& e : events) {
 			ofs.write(reinterpret_cast<const char*>(&e.id), 4);
 			uint8_t parity = e.parity ? 1 : 0;
 			ofs.write(reinterpret_cast<const char*>(&parity), 1);
@@ -274,8 +316,10 @@ void Edvs::SaveEvents(const std::vector<Edvs::Event>& events, const std::string&
 	}
 	else {
 		std::ofstream ofs(filename);
-		for(const Edvs::Event& e : events) {
+		for(const Event& e : events) {
 			ofs << e.id << "\t" << (e.parity ? 1 : 0) << "\t" << e.x << "\t" << e.y << "\t" << e.time << std::endl;
 		}
 	}
+}
+
 }
