@@ -532,9 +532,39 @@ edvs_stream_t* edvs_open(char* uri)
 		return s;
 	}
 	// check for baudrate -> serial
+	char *pbaudrate = strstr(uri, "baudrate");
+	if(pbaudrate != NULL) {
+		// FIXME parse file
+		char* port = "/dev/ttyUSB0";
+		// FIXME parse get baudrate
+		int baudrate = B4000000;
+		// open device
+		int dev = edvs_serial_open(port, baudrate);
+		if(dev < 0) {
+			printf("edvs_open: URI seems to point to a serial port, but connection failed\n");
+			return 0;
+		}
+		// start streaming
+		edvs_device_t* dh = (edvs_device_t*)malloc(sizeof(edvs_device_t));
+		dh->type = EDVS_DEVICE_SERIAL;
+		dh->handle = dev;
+		edvs_device_streaming_t* ds = edvs_device_streaming_start(dh);
+		edvs_stream_t* s = (edvs_stream_t*)malloc(sizeof(edvs_stream_t));
+		s->type = EDVS_DEVICE_STREAM;
+		s->handle = (uintptr_t)ds;
+		return s;
+	}
 	// else -> file
-	printf("edvs_open: did not recognize URI\n");
-	return 0;
+	{
+		// FIXME URI parsing
+		edvs_file_streaming_t* ds = edvs_file_streaming_start(uri, 0);
+		edvs_stream_t* s = (edvs_stream_t*)malloc(sizeof(edvs_stream_t));
+		s->type = EDVS_FILE_STREAM;
+		s->handle = (uintptr_t)ds;
+		return s;
+	}
+	// printf("edvs_open: did not recognize URI\n");
+	// return 0;
 }
 
 int edvs_close(edvs_stream_t* s)
@@ -547,6 +577,12 @@ int edvs_close(edvs_stream_t* s)
 		free(s);
 		return 0;
 	}
+	if(s->type == EDVS_FILE_STREAM) {
+		edvs_file_streaming_t* ds = (edvs_file_streaming_t*)s->handle;
+		edvs_file_streaming_stop(ds);
+		free(s);
+		return 0;
+	}
 	printf("edvs_close: unknown stream type\n");
 	return -1;
 }
@@ -556,6 +592,10 @@ ssize_t edvs_read(edvs_stream_t* s, edvs_event_t* events, size_t n)
 	if(s->type == EDVS_DEVICE_STREAM) {
 		edvs_device_streaming_t* ds = (edvs_device_streaming_t*)s->handle;
 		return edvs_device_streaming_read(ds, events, n);
+	}
+	if(s->type == EDVS_FILE_STREAM) {
+		edvs_file_streaming_t* ds = (edvs_file_streaming_t*)s->handle;
+		return edvs_file_streaming_read(ds, events, n);
 	}
 	printf("edvs_read: unknown stream type\n");
 	return -1;
