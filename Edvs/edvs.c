@@ -11,6 +11,11 @@
 #include <unistd.h>
 #include <limits.h>
 
+/** Opens a network socket for reading events
+ * @param address ip address of network socket
+ * @param port port of network socket
+ * @return socket handle on success or -1 on failure
+ */
 int edvs_net_open(char* address, int port)
 {
 	// open socket
@@ -39,11 +44,14 @@ int edvs_net_open(char* address, int port)
 	return sockfd;
 }
 
-/** Reads data from the network socket
+/** Reads data from a network socket
  * Reads at most n bytes and stores them in 'data'.
  * Does not block execution.
  * 'data' must have room for at least n bytes
- * Returns the number of bytes actually read or -1 on error.
+ * @param sockfd socket handle
+ * @param data valid buffer to store data
+ * @param n maximum number of bytes to read 
+ * @return the number of bytes actually read or -1 on failure
  */
 ssize_t edvs_net_read(int sockfd, char* data, size_t n)
 {
@@ -55,6 +63,7 @@ ssize_t edvs_net_read(int sockfd, char* data, size_t n)
 	return m;
 }
 
+/** Writes data to a network socket */
 ssize_t edvs_net_write(int sockfd, char* data, size_t n)
 {
 	ssize_t m = send(sockfd, data, n, 0);
@@ -64,6 +73,10 @@ ssize_t edvs_net_write(int sockfd, char* data, size_t n)
 	return m;
 }
 
+/** Closes a network socket edvs connection
+ * @param sockfd socket handle
+ * @return 0 on success or -1 on failure
+ */
 int edvs_net_close(int sockfd)
 {
 	int r = shutdown(sockfd, SHUT_RDWR);
@@ -85,6 +98,7 @@ int edvs_net_close(int sockfd)
 #include <stdio.h>
 #include <fcntl.h>
 
+/** Opens serial port connection to edvs sensor */
 int edvs_serial_open(char* path, int baudrate)
 {
 	int port = open(path, O_RDWR /*| O_NOCTTY/ * | O_NDELAY*/);
@@ -123,6 +137,7 @@ int edvs_serial_open(char* path, int baudrate)
 	return port;
 }
 
+/** Reads data from the serial port */
 ssize_t edvs_serial_read(int port, char* data, size_t n)
 {
 	ssize_t m = read(port, data, n);
@@ -133,6 +148,7 @@ ssize_t edvs_serial_read(int port, char* data, size_t n)
 	return m;
 }
 
+/** Writes data to the serial port */
 ssize_t edvs_serial_write(int port, char* data, size_t n)
 {
 	ssize_t m = write(port, data, n);
@@ -143,6 +159,7 @@ ssize_t edvs_serial_write(int port, char* data, size_t n)
 	return m;
 }
 
+/** Closes a serial port edvs connection */
 int edvs_serial_close(int port)
 {
 	int r = close(port);
@@ -155,43 +172,51 @@ int edvs_serial_close(int port)
 
 // ----- ----- ----- ----- ----- ----- ----- ----- ----- //
 
-typedef enum { EDVS_DEVICE_NET, EDVS_DEVICE_SERIAL } device_type;
+/** Type of edvs connection */
+typedef enum {
+	EDVS_NETWORK_DEVICE, // network socket connection
+	EDVS_SERIAL_DEVICE // serial port connection
+} device_type;
 
+/** Edvs device handle */
 typedef struct {
 	int handle;
 	device_type type;
 } edvs_device_t;
 
+/** Reads data from an edvs device */
 ssize_t edvs_device_read(edvs_device_t* dh, char* data, size_t n)
 {
 	switch(dh->type) {
-	case EDVS_DEVICE_NET:
+	case EDVS_NETWORK_DEVICE:
 		return edvs_net_read(dh->handle, data, n);
-	case EDVS_DEVICE_SERIAL:
+	case EDVS_SERIAL_DEVICE:
 		return edvs_serial_read(dh->handle, data, n);
 	default:
 		return -1;
 	}
 }
 
+/** Writes data to an edvs device */
 ssize_t edvs_device_write(edvs_device_t* dh, char* data, size_t n)
 {
 	switch(dh->type) {
-	case EDVS_DEVICE_NET:
+	case EDVS_NETWORK_DEVICE:
 		return edvs_net_write(dh->handle, data, n);
-	case EDVS_DEVICE_SERIAL:
+	case EDVS_SERIAL_DEVICE:
 		return edvs_serial_write(dh->handle, data, n);
 	default:
 		return -1;
 	}
 }
 
+/** Closes an edvs device connection */
 int edvs_device_close(edvs_device_t* dh)
 {
 	switch(dh->type) {
-	case EDVS_DEVICE_NET:
+	case EDVS_NETWORK_DEVICE:
 		return edvs_net_close(dh->handle);
-	case EDVS_DEVICE_SERIAL:
+	case EDVS_SERIAL_DEVICE:
 		return edvs_serial_close(dh->handle);
 	default:
 		return -1;
@@ -200,6 +225,7 @@ int edvs_device_close(edvs_device_t* dh)
 
 // ----- ----- ----- ----- ----- ----- ----- ----- ----- //
 
+/** Device streaming parameters and state */
 typedef struct {
 	edvs_device_t* device;
 	int timestamp_mode;
@@ -210,6 +236,7 @@ typedef struct {
 	uint64_t last_timestamp;
 } edvs_device_streaming_t;
 
+/** Starts streaming events from an edvs device */
 edvs_device_streaming_t* edvs_device_streaming_start(edvs_device_t* dh)
 {
 	edvs_device_streaming_t *s = (edvs_device_streaming_t*)malloc(sizeof(edvs_device_streaming_t));
@@ -244,6 +271,7 @@ edvs_device_streaming_t* edvs_device_streaming_start(edvs_device_t* dh)
 	return s;
 }
 
+/** Reads events from an edvs device */
 ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* events, size_t n)
 {
 	const int timestamp_mode = s->timestamp_mode;
@@ -325,6 +353,7 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 	return event_it - events;
 }
 
+/** Stops streaming from an edvs device */
 int edvs_device_streaming_stop(edvs_device_streaming_t* s)
 {
 	if(edvs_device_write(s->device, "E-\n", 3) != 3)
@@ -362,8 +391,20 @@ typedef struct {
 	size_t num_max;
 	size_t num_curr;
 	clock_t start_time;
+	uint64_t current_event_time;
 } edvs_file_streaming_t;
 
+/** Start streaming events from a previously stored binary event file
+ * Streaming can work in two modes: realtime and simulation.
+ * Realtime (set dt=0): The system clock is used to simulate realtime
+ * 			event streaming.
+ * Simulation (set dt>0): Each call to 'edvs_file_streaming_read'
+ * 			increases an internal clock by 'dt' and reads all
+ * 			events which have occurred so far.
+ * @param filename
+ * @param dt
+ * @return handle 
+ */
 edvs_file_streaming_t* edvs_file_streaming_start(char* filename, uint64_t dt)
 {
 	edvs_file_streaming_t *s = (edvs_file_streaming_t*)malloc(sizeof(edvs_file_streaming_t));
@@ -375,27 +416,35 @@ edvs_file_streaming_t* edvs_file_streaming_start(char* filename, uint64_t dt)
 	s->num_max = 1024;
 	s->unprocessed = (edvs_event_t*)malloc(s->num_max*sizeof(edvs_event_t));
 	s->num_curr = 0;
-	s->start_time = clock();
+	if(s->dt == 0) {
+		s->start_time = clock();
+	}
+	s->current_event_time = 0;
 	return s;
 }
 
+/** Reads events from the event file stream */
 ssize_t edvs_file_streaming_read(edvs_file_streaming_t* s, edvs_event_t* events, size_t events_max)
 {
 	// get time
-	clock_t current_time = clock();
-	uint64_t event_time = ((current_time - s->start_time)*1000000)/CLOCKS_PER_SEC;
+	if(s->dt == 0) {
+		s->current_event_time = ((clock() - s->start_time)*1000000)/CLOCKS_PER_SEC;
+	}
+	else {
+		s->current_event_time += s->dt;
+	}
 	size_t num_total = 0;
 	do {
 		// read more from stream
 		if(s->num_curr == 0) {
 			s->num_curr = edvs_file_read(s->fh, s->unprocessed, s->num_max);
-			if(s->num_curr < 0) return -1;
+			if(s->num_curr == 0) return -1;
 		}
 		// find first event with time greater equal to desires time
 		size_t n = 0;
 		while( n < s->num_curr
 			&& num_total < events_max
-			&& s->unprocessed[n].t < event_time
+			&& s->unprocessed[n].t < s->current_event_time
 		) {
 			n++;
 			num_total++;
@@ -417,6 +466,7 @@ ssize_t edvs_file_streaming_read(edvs_file_streaming_t* s, edvs_event_t* events,
 	return num_total;
 }
 
+/** Stops streaming from an event file */
 int edvs_file_streaming_stop(edvs_file_streaming_t* s)
 {
 	fclose(s->fh);
@@ -427,82 +477,19 @@ int edvs_file_streaming_stop(edvs_file_streaming_t* s)
 
 // ----- ----- ----- ----- ----- ----- ----- ----- ----- //
 
-// #include <string.h>
-// #include <stdbool.h>
-
-// typedef struct {
-// 	uintptr_t* elements;
-// 	size_t num;
-// } edvs_stream_list_t;
-
-// edvs_stream_list_t* edvs_stream_list_create()
-// {
-// 	edvs_stream_list_t* q = (edvs_stream_list_t*)malloc(sizeof(edvs_stream_list_t));
-// 	q->num = 16;
-// 	q->elements = (uintptr_t*)malloc(q->num*sizeof(uintptr_t));
-// 	return q;
-// }
-
-// edvs_stream_list_t* s_edvs_stream_list = NULL;
-
-// int edvs_stream_list_add(void* stream)
-// {
-// 	if(s_edvs_stream_list == NULL) {
-// 		s_edvs_stream_list = edvs_stream_list_create();
-// 	}
-// 	for(size_t i=0; i<s_edvs_stream_list->num; i++) {
-// 		if(s_edvs_stream_list->elements[i] == 0) {
-// 			s_edvs_stream_list->elements[i] = (uintptr_t)stream;
-// 			return 1;
-// 		}
-// 	}
-// 	uintptr_t* sn = (uintptr_t*)malloc((s_edvs_stream_list->num + 1)*sizeof(uintptr_t));
-// 	if(sn == NULL) {
-// 		return -1;
-// 	}
-// 	memcpy(sn, s_edvs_stream_list->elements, s_edvs_stream_list->num*sizeof(uintptr_t));
-// 	free(s_edvs_stream_list->elements);
-// 	s_edvs_stream_list->elements = sn;
-// 	s_edvs_stream_list->elements[s_edvs_stream_list->num] = (uintptr_t)stream;
-// 	s_edvs_stream_list->num ++;
-// 	return 1;
-// }
-
-// bool edvs_stream_list_check(void* stream)
-// {
-// 	if(s_edvs_stream_list == NULL) {
-// 		return false;
-// 	}
-// 	for(size_t i=0; i<s_edvs_stream_list->num; i++) {
-// 		if(s_edvs_stream_list->elements[i] == (uintptr_t)stream) {
-// 			return true;
-// 		}
-// 	}
-// 	return false;
-// }
-
-// int edvs_stream_list_remove(void* stream)
-// {
-// 	if(s_edvs_stream_list == NULL) {
-// 		return -1;
-// 	}
-// 	for(size_t i=0; i<s_edvs_stream_list->num; i++) {
-// 		if(s_edvs_stream_list->elements[i] == (uintptr_t)stream) {
-// 			s_edvs_stream_list->elements[i] = 0;
-// 			return 1;
-// 		}
-// 	}
-// 	return -1;
-// }
-
-// ----- ----- ----- ----- ----- ----- ----- ----- ----- //
-
 #include <stdint.h>
 #include <string.h>
 
-edvs_stream_t* edvs_open(char* uri)
+typedef enum { EDVS_DEVICE_STREAM, EDVS_FILE_STREAM } stream_type;
+
+struct edvs_stream_t {
+	stream_type type;
+	uintptr_t handle;
+};
+
+edvs_stream_handle edvs_open(char* uri)
 {
-	// check for -> net
+	// check for a ':' -> network socket
 	char *pcolon = strstr(uri, ":");
 	if(pcolon != NULL) {
 		// get ip from uri
@@ -510,11 +497,10 @@ edvs_stream_t* edvs_open(char* uri)
 		char *ip = (char*)malloc(ip_len+1);
 		memcpy(ip, uri, ip_len);
 		ip[ip_len] = '\0';
-		printf("port=%s", ip);
 		// get port from uri
 		int port = atoi(pcolon+1);
-		printf("port=%d", port);
 		// open device
+		printf("Opening network socket: ip=%s, port=%d\n", ip, port);
 		int dev = edvs_net_open(ip, port);
 		if(dev < 0) {
 			printf("edvs_open: URI seems to point to a network socket, but connection failed\n");
@@ -523,22 +509,23 @@ edvs_stream_t* edvs_open(char* uri)
 		free(ip);
 		// start streaming
 		edvs_device_t* dh = (edvs_device_t*)malloc(sizeof(edvs_device_t));
-		dh->type = EDVS_DEVICE_NET;
+		dh->type = EDVS_NETWORK_DEVICE;
 		dh->handle = dev;
 		edvs_device_streaming_t* ds = edvs_device_streaming_start(dh);
-		edvs_stream_t* s = (edvs_stream_t*)malloc(sizeof(edvs_stream_t));
+		struct edvs_stream_t* s = (struct edvs_stream_t*)malloc(sizeof(struct edvs_stream_t));
 		s->type = EDVS_DEVICE_STREAM;
 		s->handle = (uintptr_t)ds;
 		return s;
 	}
-	// check for baudrate -> serial
+	// check for 'baudrate' -> serial
 	char *pbaudrate = strstr(uri, "baudrate");
 	if(pbaudrate != NULL) {
-		// FIXME parse file
+		// FIXME parse uri for port
 		char* port = "/dev/ttyUSB0";
-		// FIXME parse get baudrate
+		// FIXME parse uri for baudrate
 		int baudrate = B4000000;
 		// open device
+		printf("Opening serial port: port=%s, baudrate=%d\n", port, baudrate);
 		int dev = edvs_serial_open(port, baudrate);
 		if(dev < 0) {
 			printf("edvs_open: URI seems to point to a serial port, but connection failed\n");
@@ -546,19 +533,22 @@ edvs_stream_t* edvs_open(char* uri)
 		}
 		// start streaming
 		edvs_device_t* dh = (edvs_device_t*)malloc(sizeof(edvs_device_t));
-		dh->type = EDVS_DEVICE_SERIAL;
+		dh->type = EDVS_SERIAL_DEVICE;
 		dh->handle = dev;
 		edvs_device_streaming_t* ds = edvs_device_streaming_start(dh);
-		edvs_stream_t* s = (edvs_stream_t*)malloc(sizeof(edvs_stream_t));
+		struct edvs_stream_t* s = (struct edvs_stream_t*)malloc(sizeof(struct edvs_stream_t));
 		s->type = EDVS_DEVICE_STREAM;
 		s->handle = (uintptr_t)ds;
 		return s;
 	}
 	// else -> file
 	{
-		// FIXME URI parsing
-		edvs_file_streaming_t* ds = edvs_file_streaming_start(uri, 0);
-		edvs_stream_t* s = (edvs_stream_t*)malloc(sizeof(edvs_stream_t));
+		// FIXME correct URI parsing
+		// FIXME parse dt
+		uint64_t dt = 0;
+		printf("Opening event file '%s', using dt=%lu\n", uri, dt);
+		edvs_file_streaming_t* ds = edvs_file_streaming_start(uri, dt);
+		struct edvs_stream_t* s = (struct edvs_stream_t*)malloc(sizeof(struct edvs_stream_t));
 		s->type = EDVS_FILE_STREAM;
 		s->handle = (uintptr_t)ds;
 		return s;
@@ -567,7 +557,7 @@ edvs_stream_t* edvs_open(char* uri)
 	// return 0;
 }
 
-int edvs_close(edvs_stream_t* s)
+int edvs_close(edvs_stream_handle s)
 {
 	if(s->type == EDVS_DEVICE_STREAM) {
 		edvs_device_streaming_t* ds = (edvs_device_streaming_t*)s->handle;
@@ -587,7 +577,7 @@ int edvs_close(edvs_stream_t* s)
 	return -1;
 }
 
-ssize_t edvs_read(edvs_stream_t* s, edvs_event_t* events, size_t n)
+ssize_t edvs_read(edvs_stream_handle s, edvs_event_t* events, size_t n)
 {
 	if(s->type == EDVS_DEVICE_STREAM) {
 		edvs_device_streaming_t* ds = (edvs_device_streaming_t*)s->handle;
@@ -608,11 +598,11 @@ ssize_t edvs_read(edvs_stream_t* s, edvs_event_t* events, size_t n)
 
 int main(int argc, char** argv)
 {
-	if(argc == 1) {
-		printf("Usage: cmd ip:port\n");
-		return 0;
+	if(argc != 2) {
+		printf("Wrong usage\n");
+		return EXIT_FAILURE;
 	}
-	edvs_stream_t* s = edvs_open(argv[1]);
+	edvs_stream_handle s = edvs_open(argv[1]);
 	size_t n = 128;
 	edvs_event_t* events = (edvs_event_t*)malloc(n*sizeof(edvs_event_t));
 	size_t num = 0;
@@ -622,5 +612,6 @@ int main(int argc, char** argv)
 		num += m;
 	}
 	edvs_close(s);
-	return 1;
+	free(events);
+	return EXIT_SUCCESS;
 }

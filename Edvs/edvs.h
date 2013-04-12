@@ -10,13 +10,7 @@
 extern "C" {
 #endif
 
-typedef enum { EDVS_DEVICE_STREAM, EDVS_FILE_STREAM } stream_type;
-
-typedef struct {
-	stream_type type;
-	uintptr_t handle;
-} edvs_stream_t;
-
+/** An edvs event */
 typedef struct {
 	uint64_t t;
 	uint16_t x, y;
@@ -24,14 +18,25 @@ typedef struct {
 	uint8_t id;
 } edvs_event_t;
 
-edvs_stream_t* edvs_open(char* uri);
+typedef struct edvs_stream_t* edvs_stream_handle;
 
-int edvs_close(edvs_stream_t* h);
+/** Opens an edvs stream */
+edvs_stream_handle edvs_open(char* uri);
 
-ssize_t edvs_read(edvs_stream_t* h, edvs_event_t* events, size_t n);
+/** Closes an edvs stream */
+int edvs_close(edvs_stream_handle h);
 
+/** Reads events from an edvs stream
+ * @param h stream handle
+ * @param events buffer to store events (must have room for 'n' events)
+ * @param n maximal number of events to read
+ */
+ssize_t edvs_read(edvs_stream_handle h, edvs_event_t* events, size_t n);
+
+/** Reads events from a file stream */
 ssize_t edvs_file_read(FILE* fh, edvs_event_t* events, size_t n);
 
+/** Writes events to a file stream */
 ssize_t edvs_file_write(FILE* fh, edvs_event_t* events, size_t n);
 
 #ifdef __CPLUSPLUS__
