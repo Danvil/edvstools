@@ -1,7 +1,7 @@
-#ifndef INCLUDE_EDVS_DEVICEEVENTPARSER_HPP_
-#define INCLUDE_EDVS_DEVICEEVENTPARSER_HPP_
+#ifndef INCLUDE_EDVS_RAWDEVICEEVENTPARSER_HPP_
+#define INCLUDE_EDVS_RAWDEVICEEVENTPARSER_HPP_
 
-#include "DeviceEventStream.hpp"
+#include "RawDeviceEventStream.hpp"
 #include <iostream>
 
 //#define VERBOSE
@@ -12,7 +12,7 @@ namespace Edvs
 
 	const unsigned int cTimestampMode = 2;
 			
-	DeviceEventStream::DeviceEventStream(const DeviceHandle& device, size_t buffer_size)
+	RawDeviceEventStream::RawDeviceEventStream(const DeviceHandle& device, size_t buffer_size)
 	: device_(device)
 	{
 		buffer_.resize(buffer_size);
@@ -33,12 +33,12 @@ namespace Edvs
 		device_->sendCommand("E+\n");
 	}
 
-	DeviceEventStream::~DeviceEventStream()
+	RawDeviceEventStream::~RawDeviceEventStream()
 	{
 		device_->sendCommand("E-\n");
 	}
 
-	void DeviceEventStream::read(std::vector<RawEvent>& events)
+	void RawDeviceEventStream::read(std::vector<RawEvent>& events)
 	{
 		const unsigned char cHighBitMask = 0x80; // 10000000
 		const unsigned char cLowerBitsMask = 0x7F; // 01111111

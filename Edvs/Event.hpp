@@ -6,7 +6,9 @@
 
 namespace Edvs
 {
-	/** An eDVS event */
+	/** A raw eDVS event
+	 * Structure size is 7 bytes
+	 */
 	struct RawEvent
 	{
 		// timestamp
@@ -25,6 +27,9 @@ namespace Edvs
 
 	};
 
+	/** A normal edvs event with high-resolution timestamp, device id and real coordinates
+	 * Structure size is 21 bytes
+	 */
 	struct Event
 	{
 		// timestamp

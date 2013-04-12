@@ -8,17 +8,22 @@
 namespace Edvs
 {
 
-	class EventStream
+	template<typename event_t>
+	class IEventStream
 	{
 	public:
-		virtual ~EventStream() {}
+		virtual ~IEventStream() {}
 
-		virtual void read(std::vector<RawEvent>& events) = 0;
+		virtual void read(std::vector<event_t>& events) = 0;
 
 		virtual bool eof() const = 0;
 
 	};
 
+	typedef IEventStream<RawEvent> RawEventStream;
+	typedef boost::shared_ptr<RawEventStream> RawEventStreamHandle;
+
+	typedef IEventStream<Event> EventStream;
 	typedef boost::shared_ptr<EventStream> EventStreamHandle;
 
 }

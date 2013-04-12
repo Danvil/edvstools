@@ -3,31 +3,45 @@
 
 #include "EventStream.hpp"
 #include <boost/thread.hpp>
-#include <boost/function.hpp>
+#include <functional>
 #include <boost/shared_ptr.hpp>
+#include <boost/make_shared.hpp>
 #include <vector>
 
 namespace Edvs
 {
-	typedef boost::function<void(const std::vector<RawEvent>&)> EventCallbackType;
-
-	struct EventCapture
+	template<typename event_t>
+	struct TEventCapture
 	{	
-		EventCapture(const EventStreamHandle& stream, EventCallbackType callback);
+		typedef boost::shared_ptr<IEventStream<event_t>> handle_t;
+		typedef std::function<void(const std::vector<event_t>&)> callback_t;
 
-		~EventCapture();
+		TEventCapture(const handle_t& stream, callback_t callback)
+		: stream_(stream), callback_(callback) {
+			running_ = true;
+			thread_ = boost::thread(&TEventCapture<event_t>::threadMain, this);
+		}
+
+		~TEventCapture() {
+			running_ = false;
+			thread_.join();
+		}
 
 	private:
-		void threadMain();
+		void threadMain() {
+			while(running_) {
+				stream_->read(buffer_);
+				callback_(buffer_);
+			}
+		}
 
 	private:
-		EventStreamHandle stream_;
-		EventCallbackType cb_;
+		handle_t stream_;
+		callback_t callback_;
 		bool running_;
 		boost::thread thread_;
+		std::vector<event_t> buffer_;
 	};
-
-	typedef boost::shared_ptr<EventCapture> EventCaptureHandle;
 
 	/** Runs event capture
 	 * Capturing starts on object construction and ends on object destruction.
@@ -41,7 +55,16 @@ namespace Edvs
 	 * @param callback Edvs callback function
 	 * @param buffer_size Maximum bytes to read from the device at once
 	 */
-	EventCaptureHandle RunEventCapture(const EventStreamHandle& stream, EventCallbackType callback);
+	template<typename event_t>
+	inline boost::shared_ptr<TEventCapture<event_t>> RunEventCapture(
+		const typename TEventCapture<event_t>::handle_t& stream,
+		typename TEventCapture<event_t>::callback_t callback
+	) {
+		return boost::make_shared<TEventCapture<event_t>>(stream, callback);
+	}
+
+	typedef boost::shared_ptr<TEventCapture<RawEvent>> RawEventCaptureHandle;
+	typedef boost::shared_ptr<TEventCapture<Event>> EventCaptureHandle;
 
 }
 

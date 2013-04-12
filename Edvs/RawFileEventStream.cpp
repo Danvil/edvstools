@@ -1,13 +1,13 @@
-#include "FileEventStream.hpp"
+#include "RawFileEventStream.hpp"
 #include "LoadSaveEvents.hpp"
 
 namespace Edvs
 {
 
-FileEventStream::FileEventStream(const std::string& filename, uint32_t fixed_dt)
+RawFileEventStream::RawFileEventStream(const std::string& filename, uint32_t fixed_dt)
 : fixed_dt_(fixed_dt)
 {
-	events_ = LoadEvents(filename);
+	events_ = LoadRawEvents(filename);
 	if(fixed_dt_ == 0) {
 		last_time_ = std::chrono::high_resolution_clock::now();
 	}
@@ -32,7 +32,7 @@ FileEventStream::FileEventStream(const std::string& filename, uint32_t fixed_dt)
 // //	std::cout << "Events: " << std::distance(last, next) << std::endl;
 
 
-void FileEventStream::read(std::vector<Event>& events)
+void RawFileEventStream::read(std::vector<RawEvent>& events)
 {
 	// use a clock to find out how many events should be returned
 	int32_t dt_required;
@@ -71,7 +71,7 @@ void FileEventStream::read(std::vector<Event>& events)
 	last_event_ = next;
 }
 
-bool FileEventStream::eof() const
+bool RawFileEventStream::eof() const
 {
 	return last_event_ == events_.end();
 }

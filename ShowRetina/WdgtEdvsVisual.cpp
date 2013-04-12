@@ -1,5 +1,4 @@
 #include "WdgtEdvsVisual.h"
-#include <boost/bind.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
 #include <iostream>
 
@@ -32,20 +31,27 @@ EdvsVisual::EdvsVisual(const Edvs::EventStreamHandle& dh, QWidget *parent)
 
 	// start capture
 	edvs_event_stream_ = dh;
-	edvs_event_capture_ = Edvs::RunEventCapture(edvs_event_stream_,
-		boost::bind(&EdvsVisual::OnEvent, this, _1));
+	edvs_event_capture_ = Edvs::RunEventCapture<Edvs::Event>(edvs_event_stream_,
+		std::bind(&EdvsVisual::OnEvent, this, std::placeholders::_1));
 }
 
 EdvsVisual::~EdvsVisual()
 {
 }
 
-void EdvsVisual::OnEvent(const std::vector<Edvs::RawEvent>& newevents)
+void EdvsVisual::OnEvent(const std::vector<Edvs::Event>& newevents)
 {
 	// just store events
 	// protect common vector with a mutex to avoid race conditions
 	boost::interprocess::scoped_lock<boost::mutex> lock(events_mtx_);
 	events_.insert(events_.end(), newevents.begin(), newevents.end());
+
+	for(const auto& e : newevents) {
+		std::cout << e.time << ", ";
+	}
+	std::cout << std::endl;
+	// if(!newevents.empty())
+		// std::cout << newevents.back().time << std::endl;
 }
 
 int DecayComponent(int current, int target, int decay)
@@ -80,8 +86,8 @@ void EdvsVisual::Update()
 	// write events
 	{
 		boost::interprocess::scoped_lock<boost::mutex> lock(events_mtx_);
-		for(std::vector<Edvs::RawEvent>::const_iterator it=events_.begin(); it!=events_.end(); it++) {
-			image_.setPixel(it->x, it->y, it->parity ? cColorOn : cColorOff);
+		for(const Edvs::Event& e : events_) {
+			image_.setPixel(e.x, e.y, e.parity ? cColorOn : cColorOff);
 		}
 		events_.clear();
 	}

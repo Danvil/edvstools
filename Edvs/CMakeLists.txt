@@ -1,11 +1,12 @@
 PROJECT(Edvs)
 
 ADD_LIBRARY(${PROJECT_NAME} SHARED
-	DeviceEventStream.cpp
-	EventCapture.cpp
 	EventStreamFactory.cpp
 	FileEventStream.cpp
 	LoadSaveEvents.cpp
+	RawDeviceEventStream.cpp
+	RawEventTranslator.cpp
+	RawFileEventStream.cpp
 )
 
 TARGET_LINK_LIBRARIES(${PROJECT_NAME}

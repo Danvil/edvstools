@@ -1,5 +1,5 @@
-#ifndef INCLUDE_EDVS_DEVICEEVENTPARSER_HPP
-#define INCLUDE_EDVS_DEVICEEVENTPARSER_HPP
+#ifndef INCLUDE_EDVS_RAWDEVICEEVENTPARSER_HPP
+#define INCLUDE_EDVS_RAWDEVICEEVENTPARSER_HPP
 
 #include "EventStream.hpp"
 #include "Device.hpp"
@@ -8,13 +8,13 @@
 namespace Edvs
 {
 
-	class DeviceEventStream
-	: public EventStream
+	class RawDeviceEventStream
+	: public RawEventStream
 	{
 	public:
-		DeviceEventStream(const DeviceHandle& device, size_t buffer_size=8192);
+		RawDeviceEventStream(const DeviceHandle& device, size_t buffer_size=8192);
 		
-		~DeviceEventStream();
+		~RawDeviceEventStream();
 		
 		void read(std::vector<RawEvent>& events);
 
