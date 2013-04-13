@@ -1,36 +1,30 @@
 #ifndef INCLUDE_EDVS_EVENT_HPP_
 #define INCLUDE_EDVS_EVENT_HPP_
 
+#include "event.h"
 #include <stdint.h>
 #include <iostream>
 
 namespace Edvs
 {
-	/** A raw eDVS event
-	 * Structure size is 7 bytes
-	 */
-	struct RawEvent
-	{
-		// timestamp
-		uint32_t time;
+	typedef edvs_event_t Event;
+}
 
-		// event pixel coordinate
-		unsigned char x, y;
+inline std::ostream& operator<<(std::ostream& os, const Edvs::Event& e)
+{
+	os << "[t=" << e.t
+		<< ", id=" << e.id
+		<< ", p=" << e.parity
+		<< ", (" << e.x << ", " << e.y << ")]";
+	return os;
+}
 
-		// parity
-		bool parity;
-
-		friend inline std::ostream& operator<<(std::ostream& os, const Edvs::RawEvent& e) {
-			os << "[t=" << e.time << ", p=" << e.parity << ", (" << static_cast<int>(e.x) << ", " << static_cast<int>(e.y) << ")]";
-			return os;
-		}
-
-	};
-
+namespace Edvs
+{
 	/** A normal edvs event with high-resolution timestamp, device id and real coordinates
 	 * Structure size is 21 bytes
 	 */
-	struct Event
+	struct EventF
 	{
 		// timestamp
 		uint64_t time;
@@ -44,8 +38,11 @@ namespace Edvs
 		// parity
 		bool parity;
 
-		friend inline std::ostream& operator<<(std::ostream& os, const Edvs::Event& e) {
-			os << "[t=" << e.time << ", id=" << e.id << ", p=" << e.parity << ", (" << e.x << ", " << e.y << ")]";
+		friend inline std::ostream& operator<<(std::ostream& os, const Edvs::EventF& e) {
+			os << "[t=" << e.time
+				<< ", id=" << e.id
+				<< ", p=" << e.parity
+				<< ", (" << e.x << ", " << e.y << ")]";
 			return os;
 		}
 

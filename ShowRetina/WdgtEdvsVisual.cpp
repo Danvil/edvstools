@@ -18,7 +18,7 @@ const QRgb cColorMid = qRgb(128, 128, 128);
 const QRgb cColorOn = qRgb(255, 255, 255);
 const QRgb cColorOff = qRgb(0, 0, 0);
 
-EdvsVisual::EdvsVisual(const Edvs::EventStreamHandle& dh, QWidget *parent)
+EdvsVisual::EdvsVisual(const Edvs::EventStream& dh, QWidget *parent)
     : QWidget(parent)
 {
 	ui.setupUi(this);
@@ -31,7 +31,7 @@ EdvsVisual::EdvsVisual(const Edvs::EventStreamHandle& dh, QWidget *parent)
 
 	// start capture
 	edvs_event_stream_ = dh;
-	edvs_event_capture_ = Edvs::RunEventCapture<Edvs::Event>(edvs_event_stream_,
+	edvs_event_capture_ = Edvs::EventCapture(edvs_event_stream_,
 		std::bind(&EdvsVisual::OnEvent, this, std::placeholders::_1));
 }
 
@@ -47,7 +47,7 @@ void EdvsVisual::OnEvent(const std::vector<Edvs::Event>& newevents)
 	events_.insert(events_.end(), newevents.begin(), newevents.end());
 
 	for(const auto& e : newevents) {
-		std::cout << e.time << ", ";
+		std::cout << e.t << ", ";
 	}
 	std::cout << std::endl;
 	// if(!newevents.empty())

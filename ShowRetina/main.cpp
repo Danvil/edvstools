@@ -1,5 +1,5 @@
 #include "WdgtEdvsVisual.h"
-#include <Edvs/EventStreamFactory.hpp>
+#include <Edvs/EventStream.hpp>
 #include <QtGui>
 #include <QApplication>
 #include <boost/program_options.hpp>
@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	Edvs::EventStreamHandle stream = Edvs::OpenURI(p_uri);
+	Edvs::EventStream stream(p_uri);
 
 	QApplication a(argc, argv);
 	EdvsVisual w(stream);

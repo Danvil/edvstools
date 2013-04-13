@@ -3,46 +3,13 @@
 
 #include "EventStream.hpp"
 #include <boost/thread.hpp>
-#include <functional>
+#include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <vector>
 
 namespace Edvs
 {
-	template<typename event_t>
-	struct TEventCapture
-	{	
-		typedef boost::shared_ptr<IEventStream<event_t>> handle_t;
-		typedef std::function<void(const std::vector<event_t>&)> callback_t;
-
-		TEventCapture(const handle_t& stream, callback_t callback)
-		: stream_(stream), callback_(callback) {
-			running_ = true;
-			thread_ = boost::thread(&TEventCapture<event_t>::threadMain, this);
-		}
-
-		~TEventCapture() {
-			running_ = false;
-			thread_.join();
-		}
-
-	private:
-		void threadMain() {
-			while(running_) {
-				stream_->read(buffer_);
-				callback_(buffer_);
-			}
-		}
-
-	private:
-		handle_t stream_;
-		callback_t callback_;
-		bool running_;
-		boost::thread thread_;
-		std::vector<event_t> buffer_;
-	};
-
 	/** Runs event capture
 	 * Capturing starts on object construction and ends on object destruction.
 	 * Please assure that you now how shared_ptr works!
@@ -55,16 +22,53 @@ namespace Edvs
 	 * @param callback Edvs callback function
 	 * @param buffer_size Maximum bytes to read from the device at once
 	 */
-	template<typename event_t>
-	inline boost::shared_ptr<TEventCapture<event_t>> RunEventCapture(
-		const typename TEventCapture<event_t>::handle_t& stream,
-		typename TEventCapture<event_t>::callback_t callback
-	) {
-		return boost::make_shared<TEventCapture<event_t>>(stream, callback);
-	}
+	struct EventCapture
+	{
+	public:
+		typedef boost::function<void(const std::vector<Event>&)> callback_t;
 
-	typedef boost::shared_ptr<TEventCapture<RawEvent>> RawEventCaptureHandle;
-	typedef boost::shared_ptr<TEventCapture<Event>> EventCaptureHandle;
+	private:
+		struct Impl
+		{
+			Impl(const EventStream& stream, callback_t callback) {
+				running_ = true;
+				thread_ = boost::thread(&Impl::threadMain, this, stream, callback);
+			}
+			~Impl() {
+				running_ = false;
+				thread_.join();
+			}
+		private:
+			void threadMain(const EventStream& stream, callback_t callback) {
+				std::vector<edvs_event_t> buffer;
+				while(running_) {
+					stream.read(buffer);
+					callback(buffer);
+				}
+			}
+		private:
+			bool running_;
+			boost::thread thread_;
+		};
+
+	public:
+		EventCapture() {}
+
+		EventCapture(const EventStream& stream, callback_t callback) {
+			start(stream, callback);
+		}
+
+		void start(const EventStream& stream, callback_t callback) {
+			impl_ = boost::make_shared<Impl>(stream, callback);
+		}
+
+		void stop() {
+			impl_.reset();
+		}
+
+	private:
+		boost::shared_ptr<Impl> impl_;
+	};
 
 }
 

@@ -1,4 +1,4 @@
-#include <Edvs/EventStreamFactory.hpp>
+#include <Edvs/EventStream.hpp>
 #include <Edvs/EventCapture.hpp>
 #include <boost/bind.hpp>
 #include <boost/program_options.hpp>
@@ -12,7 +12,7 @@ size_t GetTimeMU() {
 	return a.tv_sec * 1000000 + a.tv_usec;
 }
 
-void MeasureSpeed(const std::vector<Edvs::RawEvent>& events)
+void MeasureSpeed(const std::vector<Edvs::Event>& events)
 {
 	// static variables will live over function calls
 	static size_t fps_count = 0;
@@ -38,16 +38,16 @@ void MeasureSpeed(const std::vector<Edvs::RawEvent>& events)
 	}
 }
 
-void ShowEvents(const std::vector<Edvs::RawEvent>& events)
+void ShowEvents(const std::vector<Edvs::Event>& events)
 {
 	std::cout << "Got " << events.size() << " events: ";
-	for(std::vector<Edvs::RawEvent>::const_iterator it=events.begin(); it!=events.end(); it++) {
+	for(std::vector<Edvs::Event>::const_iterator it=events.begin(); it!=events.end(); it++) {
 		std::cout << *it << ", ";
 	}
 	std::cout << std::endl;
 }
 
-void OnEvent(const std::vector<Edvs::RawEvent>& events, bool show_events, bool measure_speed)
+void OnEvent(const std::vector<Edvs::Event>& events, bool show_events, bool measure_speed)
 {
 	if(measure_speed) {
 		MeasureSpeed(events);
@@ -91,10 +91,10 @@ int main(int argc, char* argv[])
 	}
 
 	std::cout << "Opening event stream ..." << std::endl;
-	Edvs::EventStreamHandle stream = Edvs::OpenURI(p_uri);
+	Edvs::EventStream stream(p_uri);
 
 	std::cout << "Running event capture ..." << std::endl;
-	Edvs::EventCaptureHandle capture = Edvs::RunEventCapture(stream,
+	Edvs::EventCapture capture(stream,
 		boost::bind(OnEvent, _1, p_show_events, p_measure_speed));
 
 	// user input loop - press q to quit

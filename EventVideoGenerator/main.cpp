@@ -1,4 +1,4 @@
-#include <Edvs/LoadSaveEvents.hpp>
+#include <Edvs/EventIO.hpp>
 #include "lodepng.h"
 #include <boost/format.hpp>
 #include <boost/program_options.hpp>
@@ -47,14 +47,14 @@ unsigned int clip_retina_coord(float u)
 void create_video(const std::vector<Edvs::Event>& events, uint64_t dt, boost::format fmt_fn)
 {
 	mat8 retina(RETINA_SIZE, RETINA_SIZE);
-	uint64_t tbase = events.front().time;
+	uint64_t tbase = events.front().t;
 	auto it = events.begin();
 	for(unsigned int frame=0; it!=events.end(); frame++) {
 		std::fill(retina.data.begin(), retina.data.end(), 128);
 		unsigned int num = 0;
 		while(it != events.end()) {
 			const Edvs::Event& event = *it;
-			uint64_t t = event.time;
+			uint64_t t = event.t;
 			if(t >= tbase + dt) {
 				break;
 			}
@@ -65,7 +65,7 @@ void create_video(const std::vector<Edvs::Event>& events, uint64_t dt, boost::fo
 			it++;
 			num++;
 		}
-		std::cout << "Frame " << frame << ": time=" << it->time << ", #events=" << num << std::endl;
+		std::cout << "Frame " << frame << ": time=" << it->t << ", #events=" << num << std::endl;
 		save_png((fmt_fn % frame).str(), retina);
 		tbase += dt;
 	}

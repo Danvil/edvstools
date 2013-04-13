@@ -15,10 +15,6 @@
 namespace Edvs
 {
 
-	std::vector<RawEvent> LoadRawEvents(const std::string& filename);
-
-	void SaveRawEvents(const std::string& filename, const std::vector<RawEvent>& events);
-
 	std::vector<Edvs::Event> LoadEventsMisc(const std::string& filename, unsigned int version);
 
 	namespace EventFileFlag
@@ -60,7 +56,7 @@ namespace Edvs
 	 * 		10-13: y as float
 	 * 		14-21: time as uint64_t
 	 */
-	std::vector<Edvs::Event> LoadEvents(const std::string& filename, EventFileFlags flags=EventFileFlag::UnwrapTimestamps);
+	std::vector<Edvs::Event> LoadEventsVar(const std::string& filename, EventFileFlags flags=EventFileFlag::UnwrapTimestamps);
 
 	/* Loads a list of events from a file in an old file format
 	 * File format:
@@ -72,7 +68,7 @@ namespace Edvs
 
 	/** Saves a list of events in a file
 	 */
-	void SaveEvents(const std::vector<Edvs::Event>& events, const std::string& filename, EventFileFlags format=EventFileFlag::None);
+	void SaveEventsTable(const std::string& filename, const std::vector<Edvs::Event>& events, char separator);
 
 }
 

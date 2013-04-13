@@ -5,7 +5,7 @@
  *      Author: david
  */
 
-#include <Edvs/LoadSaveEvents.hpp>
+#include <Edvs/EventIO.hpp>
 #include <boost/program_options.hpp>
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
@@ -45,16 +45,16 @@ int main(int argc, char** argv)
 	for(const std::string& fn : fns) {
 
 		std::cout << "Loading events from file '" << fn << "'..." << std::flush;
-		std::vector<Edvs::Event> events = Edvs::LoadEvents(fn, Edvs::EventFileFlags::RawWithId);
+		std::vector<Edvs::Event> events = Edvs::LoadEvents(fn);
 		std::cout << " done." << std::endl;
 
 		std::cout << "Number of events: " << events.size() << std::endl;
 		
 		{
 			std::cout << "TIMESTAMP ORDER" << std::endl;
-			uint64_t last_t = events.front().time;
+			uint64_t last_t = events.front().t;
 			for(std::size_t i=0; i<events.size(); i++) {
-				uint64_t t = events[i].time;
+				uint64_t t = events[i].t;
 				if(t < last_t) {
 					std::cout << "\tevent " << i << ": " << t << " -> " << last_t << std::endl;
 				}
@@ -73,8 +73,8 @@ int main(int argc, char** argv)
 
 			// fill in data
 			for(std::size_t i=1; i<events.size(); i++) {
-				uint64_t t1 = events[i-1].time;
-				uint64_t t2 = events[i].time;
+				uint64_t t1 = events[i-1].t;
+				uint64_t t2 = events[i].t;
 				if(t1 < t2) {
 					a(std::abs(t2 - t1));
 				}

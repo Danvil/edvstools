@@ -20,52 +20,10 @@
 namespace Edvs
 {
 
-const unsigned char cHighBitMask = 0x80; // 10000000
-const unsigned char cLowerBitsMask = 0x7F; // 01111111
-
-std::vector<RawEvent> LoadRawEvents(const std::string& filename)
-{
-	std::vector<RawEvent> events;
-	std::ifstream ifs(filename, std::ios::binary);
-	unsigned char buff[6];
-	while(!ifs.eof()) {
-		ifs.read((char*)buff, 6);
-		unsigned char a = buff[0];
-		unsigned char b = buff[1];
-		uint32_t timestamp = (static_cast<uint32_t>(buff[2]) << 24)
-			| (static_cast<uint32_t>(buff[3]) << 16)
-			| (static_cast<uint32_t>(buff[4]) << 8)
-			| static_cast<uint32_t>(buff[5]);
-		RawEvent e;
-		e.time = timestamp;
-		e.x = b & cLowerBitsMask;
-		e.y = a & cLowerBitsMask;
-		e.parity = (b & cHighBitMask);
-		events.push_back(e);
-	}
-	return events;
-}
-
-void SaveRawEvents(const std::string& filename, const std::vector<RawEvent>& events)
-{
-	std::ofstream ofs(filename, std::ios::binary);
-	unsigned char buff[6];
-	for(const RawEvent& e : events) {
-		buff[0] = e.y & cLowerBitsMask;
-		buff[1] = (e.x & cLowerBitsMask) | (e.parity ? cHighBitMask : 0);
-		uint32_t timestamp = e.time;
-		buff[2] = static_cast<unsigned char>((timestamp >> 24) & 0xFF);
-		buff[3] = static_cast<unsigned char>((timestamp >> 16) & 0xFF);
-		buff[4] = static_cast<unsigned char>((timestamp >> 8) & 0xFF);
-		buff[5] = static_cast<unsigned char>(timestamp & 0xFF);
-		ofs.write((char*)buff, 6);
-	}
-}
-
 struct EventLineEntry
 {
-	unsigned long time;
-	float x, y;
+	uint64_t t;
+	uint16_t x, y;
 	bool flank;
 	int c1, c2, c3;
 };
@@ -78,7 +36,7 @@ EventLineEntry ParseEventLine(const std::string& line, unsigned int version)
 		//3976	98.4259809	148.546181	1	-4	20	0
 		std::vector<std::string> tokens;
 		boost::split(tokens, line, boost::is_any_of("\t"));
-		e.time = boost::lexical_cast<int>(tokens[0]);
+		e.t = boost::lexical_cast<int>(tokens[0]);
 		e.x = boost::lexical_cast<float>(tokens[1]);
 		e.y = boost::lexical_cast<float>(tokens[2]);
 		e.flank = boost::lexical_cast<bool>(tokens[3]);
@@ -97,8 +55,8 @@ EventLineEntry ParseEventLine(const std::string& line, unsigned int version)
 		e.flank = flank > 0;
 		float time;
 		iss >> time;
-		e.time = time;
-//		std::cout << e.time << " (" << e.x << "," << e.y << ") " << e.flank << std::endl;
+		e.t = time;
+//		std::cout << e.t << " (" << e.x << "," << e.y << ") " << e.flank << std::endl;
 		e.c1 = 0;
 		e.c2 = 0;
 		e.c3 = 0;
@@ -118,7 +76,7 @@ std::vector<Event> LoadEventsMisc(const std::string& filename, unsigned int vers
 		}
 		// parse line
 		EventLineEntry e = ParseEventLine(line, version);
-		Event event{e.time, 0, e.x, e.y, e.flank};
+		Event event{e.t, e.x, e.y, e.flank, 0};
 		events.push_back(event);
 	}
 	return events;
@@ -176,7 +134,7 @@ inline uint64_t parse_timestamp_fast(StrIt it, const StrIt& end) {
 	return result;
 }
 
-std::vector<Event> LoadEvents(const std::string& filename, EventFileFlags flags)
+std::vector<Event> LoadEventSVar(const std::string& filename, EventFileFlags flags)
 {
 	bool fix_wrapped_timestamps = flags & EventFileFlag::UnwrapTimestamps;
 	std::vector<Event> events;
@@ -192,9 +150,9 @@ std::vector<Event> LoadEvents(const std::string& filename, EventFileFlags flags)
 			e.parity = (*reinterpret_cast<uint8_t*>(buff + 4) == 0 ? false : true);
 			e.x = *reinterpret_cast<float*>(buff + 5);
 			e.y = *reinterpret_cast<float*>(buff + 9);
-			e.time = *reinterpret_cast<uint64_t*>(buff + 13);
+			e.t = *reinterpret_cast<uint64_t*>(buff + 13);
 			if(fix_wrapped_timestamps) {
-				e.time = unroller(e.time);
+				e.t = unroller(e.t);
 			}
 			events.push_back(e);
 		}
@@ -215,17 +173,17 @@ std::vector<Event> LoadEvents(const std::string& filename, EventFileFlags flags)
 				e.parity = (line[2] == '0' ? false : true);
 				e.x = static_cast<float>(parse_coord_fast(line[4], line[5], line[6]));
 				e.y = static_cast<float>(parse_coord_fast(line[8], line[9], line[10]));
-				e.time = parse_timestamp_fast(line.rbegin(), line.rbegin() + 8);
+				e.t = parse_timestamp_fast(line.rbegin(), line.rbegin() + 8);
 				if(fix_wrapped_timestamps) {
-					e.time = unroller(e.time);
+					e.t = unroller(e.t);
 				}
 				if(flags & EventFileFlag::BeginTimeZero) {
 					if(first_line)
 					{
 						first_line = false;
-						start_time = e.time;
+						start_time = e.t;
 					}
-					e.time -= start_time;
+					e.t -= start_time;
 				}
 				events.push_back(e);
 			}
@@ -242,10 +200,10 @@ std::vector<Event> LoadEvents(const std::string& filename, EventFileFlags flags)
 				std::istringstream iss(line);
 				Event e;
 				unsigned int ep;
-				iss >> e.id >> ep >> e.x >> e.y >> e.time;
+				iss >> e.id >> ep >> e.x >> e.y >> e.t;
 				e.parity = (ep == 0 ? false : true);
 				if(fix_wrapped_timestamps) {
-					e.time = unroller(e.time);
+					e.t = unroller(e.t);
 				}
 				events.push_back(e);
 			}
@@ -266,10 +224,10 @@ std::vector<Event> LoadEvents(const std::string& filename, EventFileFlags flags)
 			// 	unsigned int ep = boost::lexical_cast<unsigned char>(tokens[1]);
 			// 	e.x = boost::lexical_cast<float>(tokens[2]);
 			// 	e.y = boost::lexical_cast<float>(tokens[3]);
-			// 	e.time = boost::lexical_cast<uint64_t>(tokens[4]);
+			// 	e.t = boost::lexical_cast<uint64_t>(tokens[4]);
 			// 	e.parity = (ep == 0 ? false : true);
 			// 	if(fix_wrapped_timestamps) {
-			// 		e.time = unroller(e.time);
+			// 		e.t = unroller(e.t);
 			// 	}
 			// 	events.push_back(e);
 			// }
@@ -298,31 +256,37 @@ std::vector<Event> LoadEventsMatlab(const std::string& filename)
 		e.parity = (std::abs(ep - 1.0f) < 0.00001f ? true : false);
 		e.x = ex;
 		e.y = ey;
-		e.time = static_cast<uint64_t>(et);
+		e.t = static_cast<uint64_t>(et);
 		events.push_back(e);
 	}
 	return events;
 }
 
-void SaveEvents(const std::vector<Event>& events, const std::string& filename, EventFileFlags flags)
+void SaveEventsTable(const std::string& filename, const std::vector<Edvs::Event>& events, char sep)
 {
-	if(isBinary(filename, flags)) {
-		std::ofstream ofs(filename, std::ios::binary);
-		for(const Event& e : events) {
-			ofs.write(reinterpret_cast<const char*>(&e.id), 4);
-			uint8_t parity = e.parity ? 1 : 0;
-			ofs.write(reinterpret_cast<const char*>(&parity), 1);
-			ofs.write(reinterpret_cast<const char*>(&e.x), 4);
-			ofs.write(reinterpret_cast<const char*>(&e.y), 4);
-			ofs.write(reinterpret_cast<const char*>(&e.time), 8);
-		}
-	}
-	else {
-		std::ofstream ofs(filename);
-		for(const Event& e : events) {
-			ofs << e.id << "\t" << (e.parity ? 1 : 0) << "\t" << e.x << "\t" << e.y << "\t" << e.time << std::endl;
-		}
+	std::ofstream ofs(filename);
+	for(const Event& e : events) {
+		ofs << e.t << sep
+			<< e.x << sep
+			<< e.y << sep
+			<< (unsigned int)e.parity << sep
+			<< (unsigned int)e.id << std::endl;
 	}
 }
+
+// void SaveEvents(const std::vector<Event>& events, const std::string& filename, EventFileFlags flags)
+// {
+// 	if(isBinary(filename, flags)) {
+// 		std::ofstream ofs(filename, std::ios::binary);
+// 		for(const Event& e : events) {
+// 			ofs.write(reinterpret_cast<const char*>(&e.id), 4);
+// 			uint8_t parity = e.parity ? 1 : 0;
+// 			ofs.write(reinterpret_cast<const char*>(&parity), 1);
+// 			ofs.write(reinterpret_cast<const char*>(&e.x), 4);
+// 			ofs.write(reinterpret_cast<const char*>(&e.y), 4);
+// 			ofs.write(reinterpret_cast<const char*>(&e.t), 8);
+// 		}
+// 	}
+// }
 
 }

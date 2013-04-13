@@ -1,15 +1,12 @@
 PROJECT(Edvs)
 
 ADD_LIBRARY(${PROJECT_NAME} SHARED
-	EventStreamFactory.cpp
-	FileEventStream.cpp
-	LoadSaveEvents.cpp
-	RawDeviceEventStream.cpp
-	RawEventTranslator.cpp
-	RawFileEventStream.cpp
+	edvs.c
+	EventIO.cpp
 )
 
+set_source_files_properties(edvs.c PROPERTIES COMPILE_FLAGS "-std=c99 -Wall -D_BSD_SOURCE")
+
 TARGET_LINK_LIBRARIES(${PROJECT_NAME}
-	boost_filesystem
 	boost_thread
 )

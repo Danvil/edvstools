@@ -16,7 +16,7 @@
  * @param port port of network socket
  * @return socket handle on success or -1 on failure
  */
-int edvs_net_open(char* address, int port)
+int edvs_net_open(const char* address, int port)
 {
 	// open socket
 	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -64,7 +64,7 @@ ssize_t edvs_net_read(int sockfd, char* data, size_t n)
 }
 
 /** Writes data to a network socket */
-ssize_t edvs_net_write(int sockfd, char* data, size_t n)
+ssize_t edvs_net_write(int sockfd, const char* data, size_t n)
 {
 	ssize_t m = send(sockfd, data, n, 0);
 	if(m != n) {
@@ -99,7 +99,7 @@ int edvs_net_close(int sockfd)
 #include <fcntl.h>
 
 /** Opens serial port connection to edvs sensor */
-int edvs_serial_open(char* path, int baudrate)
+int edvs_serial_open(const char* path, int baudrate)
 {
 	int port = open(path, O_RDWR /*| O_NOCTTY/ * | O_NDELAY*/);
 	if(port < 0) {
@@ -149,7 +149,7 @@ ssize_t edvs_serial_read(int port, char* data, size_t n)
 }
 
 /** Writes data to the serial port */
-ssize_t edvs_serial_write(int port, char* data, size_t n)
+ssize_t edvs_serial_write(int port, const char* data, size_t n)
 {
 	ssize_t m = write(port, data, n);
 	if(m != n) {
@@ -337,7 +337,7 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 		event_it->t = s->current_time;
 		event_it->x = (uint16_t)(b & cLowerBitsMask);
 		event_it->y = (uint16_t)(a & cLowerBitsMask);
-		event_it->parity = (b & cHighBitMask); // converts to bool
+		event_it->parity = ((b & cHighBitMask) ? 1 : 0);
 		event_it->id = 0;
 		event_it++;
 		// increment index
@@ -370,7 +370,7 @@ ssize_t edvs_file_read(FILE* fh, edvs_event_t* events, size_t n)
 	return fread((void*)events, sizeof(edvs_event_t), n, fh);
 }
 
-ssize_t edvs_file_write(FILE* fh, edvs_event_t* events, size_t n)
+ssize_t edvs_file_write(FILE* fh, const edvs_event_t* events, size_t n)
 {
 	size_t m = fwrite((const void*)events, sizeof(edvs_event_t), n, fh);
 	if(m != n) {
@@ -386,6 +386,7 @@ ssize_t edvs_file_write(FILE* fh, edvs_event_t* events, size_t n)
 
 typedef struct {
 	FILE* fh;
+	int is_eof;
 	uint64_t dt;
 	edvs_event_t* unprocessed;
 	size_t num_max;
@@ -405,13 +406,14 @@ typedef struct {
  * @param dt
  * @return handle 
  */
-edvs_file_streaming_t* edvs_file_streaming_start(char* filename, uint64_t dt)
+edvs_file_streaming_t* edvs_file_streaming_start(const char* filename, uint64_t dt)
 {
 	edvs_file_streaming_t *s = (edvs_file_streaming_t*)malloc(sizeof(edvs_file_streaming_t));
 	if(s == 0) {
 		return 0;
 	}
 	s->fh = fopen(filename, "rb");
+	s->is_eof = 0;
 	s->dt = dt;
 	s->num_max = 1024;
 	s->unprocessed = (edvs_event_t*)malloc(s->num_max*sizeof(edvs_event_t));
@@ -438,7 +440,8 @@ ssize_t edvs_file_streaming_read(edvs_file_streaming_t* s, edvs_event_t* events,
 		// read more from stream
 		if(s->num_curr == 0) {
 			s->num_curr = edvs_file_read(s->fh, s->unprocessed, s->num_max);
-			if(s->num_curr == 0) return -1;
+			if(s->num_curr == 0) s->is_eof = 1;
+			return 0;
 		}
 		// find first event with time greater equal to desires time
 		size_t n = 0;
@@ -487,10 +490,10 @@ struct edvs_stream_t {
 	uintptr_t handle;
 };
 
-edvs_stream_handle edvs_open(char* uri)
+edvs_stream_handle edvs_open(const char* uri)
 {
 	// check for a ':' -> network socket
-	char *pcolon = strstr(uri, ":");
+	const char *pcolon = strstr(uri, ":");
 	if(pcolon != NULL) {
 		// get ip from uri
 		size_t ip_len = pcolon-uri;
@@ -577,6 +580,20 @@ int edvs_close(edvs_stream_handle s)
 	return -1;
 }
 
+int edvs_eos(edvs_stream_handle s)
+{
+	if(s->type == EDVS_DEVICE_STREAM) {
+		// TODO can device streams reach end of stream?
+		return 0;
+	}
+	if(s->type == EDVS_FILE_STREAM) {
+		edvs_file_streaming_t* ds = (edvs_file_streaming_t*)s->handle;
+		return ds->is_eof;
+	}
+	printf("edvs_eos: unknown stream type\n");
+	return -1;
+}
+
 ssize_t edvs_read(edvs_stream_handle s, edvs_event_t* events, size_t n)
 {
 	if(s->type == EDVS_DEVICE_STREAM) {
@@ -593,25 +610,27 @@ ssize_t edvs_read(edvs_stream_handle s, edvs_event_t* events, size_t n)
 
 // ----- ----- ----- ----- ----- ----- ----- ----- ----- //
 
-#include <signal.h>
-#include <stdio.h>
+// #include <signal.h>
+// #include <stdio.h>
 
-int main(int argc, char** argv)
-{
-	if(argc != 2) {
-		printf("Wrong usage\n");
-		return EXIT_FAILURE;
-	}
-	edvs_stream_handle s = edvs_open(argv[1]);
-	size_t n = 128;
-	edvs_event_t* events = (edvs_event_t*)malloc(n*sizeof(edvs_event_t));
-	size_t num = 0;
-	while(num < 10000) {
-		ssize_t m = edvs_read(s, events, n);
-		printf("%zd/%d events\n", num, 10000);
-		num += m;
-	}
-	edvs_close(s);
-	free(events);
-	return EXIT_SUCCESS;
-}
+// int main(int argc, char** argv)
+// {
+// 	if(argc != 2) {
+// 		printf("Wrong usage\n");
+// 		return EXIT_FAILURE;
+// 	}
+// 	edvs_stream_handle s = edvs_open(argv[1]);
+// 	size_t n = 128;
+// 	edvs_event_t* events = (edvs_event_t*)malloc(n*sizeof(edvs_event_t));
+// 	size_t num = 0;
+// 	while(num < 10000) {
+// 		ssize_t m = edvs_read(s, events, n);
+// 		printf("%zd/%d events\n", num, 10000);
+// 		num += m;
+// 	}
+// 	edvs_close(s);
+// 	free(events);
+// 	return EXIT_SUCCESS;
+// }
+
+// ----- ----- ----- ----- ----- ----- ----- ----- ----- //

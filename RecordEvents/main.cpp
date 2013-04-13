@@ -1,14 +1,14 @@
-#include <Edvs/EventStreamFactory.hpp>
+#include <Edvs/EventStream.hpp>
 #include <Edvs/EventCapture.hpp>
-#include <Edvs/LoadSaveEvents.hpp>
+#include <Edvs/EventIO.hpp>
 #include <boost/program_options.hpp>
 #include <iostream>
 #include <cstdio>
 
-std::vector<Edvs::RawEvent> all_events;
+std::vector<Edvs::Event> all_events;
 bool verbose = false;
 
-void OnEvent(const std::vector<Edvs::RawEvent>& events)
+void OnEvent(const std::vector<Edvs::Event>& events)
 {
 	all_events.insert(all_events.end(), events.begin(), events.end());
 	if(verbose) {
@@ -39,25 +39,26 @@ int main(int argc, char* argv[])
 		std::cout << desc << std::endl;
 		std::cout << "URI type format:" << std::endl;
 		std::cout << "\tNetwork socket connection: IP:PORT, e.g. 192.168.201.62:56001" << std::endl;
-		std::cout << "\tSerial port connection: PORT or PORT?baudrate=BR, e.g. /dev/ttyUSB0 or /dev/ttyUSB0?baudrate=4000000" << std::endl;
+		std::cout << "\tSerial port connection: PORT?baudrate=BR, e.g. /dev/ttyUSB0?baudrate=4000000" << std::endl;
 		std::cout << "\tRead from event file: /path/to/file" << std::endl;
 		return 1;
 	}
 
 	std::cout << "Opening event stream ..." << std::endl;
-	Edvs::EventStreamHandle stream = Edvs::OpenURI(p_uri);
+	Edvs::EventStream stream(p_uri);
 
-	std::cout << "Press any key to start recording" << std::endl;
+	std::cout << "Press Enter to start recording." << std::endl;
 	std::getchar();
 
-	std::cout << "Press any key to stop recording" << std::endl;
+	std::cout << "Recording... Press Enter to stop." << std::endl;
 	{
-		Edvs::EventCaptureHandle capture = Edvs::RunEventCapture(stream, &OnEvent);
+		Edvs::EventCapture capture(stream, &OnEvent);
 		std::getchar();
 	}
 
-	std::cout << "Saving " << all_events.size() << " events" << std::endl;
-	Edvs::SaveRawEvents(p_fn, all_events);
+	std::cout << "Saving " << all_events.size() << " events... " << std::flush;
+	Edvs::SaveEvents(p_fn, all_events);
+	std::cout << "Done." << std::endl;
 
 	return 1;
 }
