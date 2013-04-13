@@ -45,43 +45,39 @@ To connect to the eDVS sensor over serial port and display events
 
 ## Capturing events (C++)
 
-The following sample demonstrates the usage of the C++ edvs event stream.
+The following sample demonstrates the usage of the C++ edvs event stream wrapper.
 
-	#include <Edvs/EventCapture.hpp>
-	#include <boost/bind.hpp>
-	#include <iostream>
+#include <Edvs/EventCapture.hpp>
+#include <iostream>
 
-	// handle events
-	void OnEvent(const std::vector<Edvs::Event>& events)
-	{
-		std::cout << "Got " << events.size() << " events: ";
-		for(std::vector<Edvs::RawEvent>::const_iterator it=events.begin(); it!=events.end(); it++) {
-			std::cout << *it << ", ";
-		}
-		std::cout << std::endl;
+void OnEvent(const std::vector<Edvs::Event>& events)
+{
+	if(events.size() > 0) {
+		std::cout << "Time " << events.back().t << ": " << events.size() << " events" << std::endl;
 	}
+}
 
-	// main loop
-	int main(int argc, char* argv[])
-	{
-		// run capture
-		Edvs::EventStream stream("192.168.201.62:56000");
-		Edvs::EventCapture capture(stream, &OnEvent);
-		// press q to quit
-		std::string str;
-		while(str != "q") {
-			// read command
-			std::cin >> str;
-		}
-		return 1;
+int main(int argc, char* argv[])
+{
+	if(argc != 2) {
+		std::cout << "Wrong usage" << std::endl;
+		return 0;
 	}
+	// run event capture
+	Edvs::EventStream stream(argv[1]);
+	Edvs::EventCapture capture(stream, &OnEvent);
+	// run until EOF or Ctrl+C
+	while(!stream.eos());
+	return 1;
+}
 
 ## Capturing events (C)
 
-The following sample demonstrates the usage of the C++ edvs event stream.
+The following sample demonstrates how to read edvs events using plain C.
 
-// #include <signal.h>
-// #include <stdio.h>
+	#include "edvs.h"
+	#include <stdlib.h>
+	#include <stdio.h>
 
 	int main(int argc, char** argv)
 	{
@@ -89,15 +85,17 @@ The following sample demonstrates the usage of the C++ edvs event stream.
 			printf("Wrong usage\n");
 			return EXIT_FAILURE;
 		}
+		// run event capture
 		edvs_stream_handle s = edvs_open(argv[1]);
-		size_t n = 128;
-		edvs_event_t* events = (edvs_event_t*)malloc(n*sizeof(edvs_event_t));
-		size_t num = 0;
-		while(num < 10000) {
-			ssize_t m = edvs_read(s, events, n);
-			printf("%zd/%d events\n", num, 10000);
-			num += m;
+		size_t num_max_events = 1024;
+		edvs_event_t* events = (edvs_event_t*)malloc(num_max_events*sizeof(edvs_event_t));
+		while(!edvs_eos(s)) {
+			ssize_t m = edvs_read(s, events, num_max_events);
+			if(m > 0) {
+				printf("Time %lu: %zd events\n", events->t, m);
+			}
 		}
+		// cleanup
 		edvs_close(s);
 		free(events);
 		return EXIT_SUCCESS;
