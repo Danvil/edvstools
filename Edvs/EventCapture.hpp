@@ -31,24 +31,22 @@ namespace Edvs
 		struct Impl
 		{
 			Impl(const EventStream& stream, callback_t callback) {
-				running_ = true;
+				is_running_ = true;
 				thread_ = boost::thread(&Impl::threadMain, this, stream, callback);
 			}
 			~Impl() {
-				running_ = false;
+				is_running_ = false;
 				thread_.join();
 			}
-		private:
 			void threadMain(const EventStream& stream, callback_t callback) {
 				std::vector<edvs_event_t> buffer(1024);
-				while(running_) {
+				while(is_running_ && !stream.eos()) {
 					buffer.resize(1024);
 					stream.read(buffer);
 					callback(buffer);
 				}
 			}
-		private:
-			bool running_;
+			bool is_running_;
 			boost::thread thread_;
 		};
 
@@ -61,6 +59,10 @@ namespace Edvs
 
 		void start(const EventStream& stream, callback_t callback) {
 			impl_ = boost::make_shared<Impl>(stream, callback);
+		}
+
+		bool is_running() const {
+			return impl_->is_running_;
 		}
 
 		void stop() {
