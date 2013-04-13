@@ -56,7 +56,7 @@ int main(int argc, char** argv)
 			for(std::size_t i=0; i<events.size(); i++) {
 				uint64_t t = events[i].t;
 				if(t < last_t) {
-					std::cout << "\tevent " << i << ": " << t << " -> " << last_t << std::endl;
+					std::cout << "\tevent " << i << ": " << last_t << " -> " << t << std::endl;
 				}
 				last_t = t;
 			}

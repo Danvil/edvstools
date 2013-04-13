@@ -22,20 +22,28 @@ namespace Edvs
 struct TimeUnroller
 {
 	TimeUnroller()
-	: last_time_(0), time_add_(0)
+	: current_time_(0), last_time_(0)
 	{}
 
 	uint64_t operator()(uint64_t t) {
-		if(t < last_time_ && std::abs(last_time_-t) > 60108864) {
-			time_add_ += 67108864;
+		if(current_time_ == 0 && last_time_ == 0) {
+			last_time_ = t;
+		}
+		uint64_t dt;
+		if(last_time_ <= t) {
+			dt = t - last_time_;
+		}
+		else {
+			dt = 2*t; // HACK we do not know when it wraps!
 		}
 		last_time_ = t;
-		return t + time_add_;
+		current_time_ += dt;
+		return current_time_;
 	}
 
 private:
+	uint64_t current_time_;
 	uint64_t last_time_;
-	uint64_t time_add_;
 };
 
 inline uint32_t parse_coord_fast(unsigned char c, unsigned char b, unsigned char a) {
