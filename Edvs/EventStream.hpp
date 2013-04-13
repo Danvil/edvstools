@@ -72,10 +72,6 @@ namespace Edvs
 		boost::shared_ptr<Impl> impl_;
 	};
 
-	void WriteEvents(const std::string& fn, const std::vector<edvs_event_t>& v);
-
-	std::vector<edvs_event_t> ReadEvents(const std::string& fn);
-
 }
 
 #endif
