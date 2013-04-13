@@ -35,29 +35,49 @@ int main(int argc, char** argv)
 		std::cout << desc << std::endl;
 		std::cout << "Supported file formats:" << std::endl;
 		std::cout << "\tnatural: binary default file format" << std::endl;
-		std::cout << "\tmatlab" << std::endl;
 		std::cout << "\tcsv: text comma separated values" << std::endl;
 		std::cout << "\ttsv: text tab separated values" << std::endl;
+		std::cout << "\tjc: JC file format" << std::endl;
+		std::cout << "\told: A deprecated binary file format" << std::endl;
 		return 1;
 	}
 
 	std::vector<Edvs::Event> events;
 
 	std::cout << "Loading events from file '" << p_in << "'..." << std::flush;
-
-	// events = Edvs::LoadEvents(fn_in,
-	// 	Edvs::EventFileFlags(Edvs::EventFileFlag::RawWithId | Edvs::EventFileFlag::UnwrapTimestamps | Edvs::EventFileFlag::BeginTimeZero));
-	
-	// Edvs::LoadEventsMisc(fn_in, 1);
-
-	// events = Edvs::LoadEventsMatlab(p_in);
-
-	events = Edvs::LoadEvents(p_in);
-	
-	std::cout << " done." << std::endl;
+	if(p_in_format == "natural") {
+		events = Edvs::LoadEvents(p_in);
+	}
+	else if(p_in_format == "csv") {
+		events = Edvs::LoadEventsTable(p_in, ',');
+	}
+	else if(p_in_format == "tsv") {
+		events = Edvs::LoadEventsTable(p_in, '\t');
+	}
+	else if(p_in_format == "jc") {
+		events = Edvs::LoadEventsJC(p_in, true);
+	}
+	else if(p_in_format == "old") {
+		events = Edvs::LoadEventsOld(p_in, true);
+	}
+	else {
+		std::cerr << "Unsupported input file format!" << std::endl;
+	}
+	std::cout << " done (" << events.size() << " events)." << std::endl;
 
 	std::cout << "Saving events to file '" << p_out << "'..." << std::flush;
-	Edvs::SaveEvents(p_out, events);
+	if(p_out_format == "natural") {
+		Edvs::SaveEvents(p_out, events);
+	}
+	else if(p_out_format == "csv") {
+		Edvs::SaveEventsTable(p_out, events, ',');
+	}
+	else if(p_out_format == "tsv") {
+		Edvs::SaveEventsTable(p_out, events, '\t');
+	}
+	else {
+		std::cerr << "Unsupported output file format!" << std::endl;
+	}
 	std::cout << " done." << std::endl;
 
 	return 1;

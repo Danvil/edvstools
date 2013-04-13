@@ -14,57 +14,28 @@
 
 namespace Edvs
 {
-
-	std::vector<Edvs::Event> LoadEventsMisc(const std::string& filename, unsigned int version);
-
-	namespace EventFileFlag
-	{
-		enum Type {
-			None = 0,
-			Text = 1<<0,
-			Binary = 1<<1,
-			RawWithId = 1<<2,
-			UnwrapTimestamps = 1<<3,
-			BeginTimeZero = 1<<4
-		};
-	}
-	typedef EventFileFlag::Type EventFileFlags;
-
-	/** Loads a list of events from a file
-	 * An event consists of
-	 * 	a timestamp (positive integer),
-	 * 	the x/y event pixel position on the retina (integer in range 0-128) and
-	 * 	a parity value which is 0 or 1.
-	 * There are three format specifiers: Text, Binary or Auto
-	 * 		Text/Binary saves events in text/binary format
-	 * 		Auto determines format by filename. An extension of txt indicates
-	 * 		a text file, all other extensions indicate binary files.
-	 * There are two file formats text and binary:
-	 * 	a) Text
-	 * 		each line consists of one event of the following format
-	 * 			id:uint32_t
-	 * 			parity:uint8_t
-	 * 			x:float
-	 * 			y:float
-	* 			time:uint64_t
-	 * 		the inidividual entries are separated by tabs
-	 * 	b) Binary
-	 * 		for each event 18 bytes of binary data
-	 * 		0-4: id as uint32_t
-	 * 		5: parity as uint8_t
-	 * 		6-9: x as float
-	 * 		10-13: y as float
-	 * 		14-21: time as uint64_t
+	/** Loads events in table file format
+	 * Each line is one event and lines are separated with std::endl.
+	 * Each value in each line is separated by 'separator'
+	 * Values per line: t, x, y, parity, id
 	 */
-	std::vector<Edvs::Event> LoadEventsVar(const std::string& filename, EventFileFlags flags=EventFileFlag::UnwrapTimestamps);
+	std::vector<Edvs::Event> LoadEventsTable(const std::string& filename, char separator);
 
-	/* Loads a list of events from a file in an old file format
-	 * File format:
-	 * 		each line consists of one event of the following format
-	 *		x: float	y: float	parity: float	time: float
-	 * 		the inidividual entries are separated by tabs
+	/** Loads events from JC file format
+	 * Each line is one event.
+	 * Line format: XXX YYY P TTTTTTTTTT
 	 */
-	std::vector<Edvs::Event> LoadEventsMatlab(const std::string& filename);
+	std::vector<Edvs::Event> LoadEventsJC(const std::string& filename, bool unwrap_timestamps=false);
+
+	/** Loads events from an old binary file format
+	 * 		for each event 21 bytes of binary data
+	 * 		0-3: id as uint32_t
+	 * 		4: parity as uint8_t
+	 * 		5-8: x as float
+	 * 		9-12: y as float
+	 * 		13-20: time as uint64_t
+	 */
+	std::vector<Edvs::Event> LoadEventsOld(const std::string& filename, bool unwrap_timestamps=false);
 
 	/** Saves a list of events in a file
 	 */
