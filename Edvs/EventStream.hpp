@@ -49,8 +49,8 @@ namespace Edvs
 		}
 
 		void read(std::vector<edvs_event_t>& v) const {
-			v.clear();
 			if(!is_open()) {
+				v.clear();
 				return;
 			}
 			ssize_t m = edvs_read(impl_->h, v.data(), v.size());

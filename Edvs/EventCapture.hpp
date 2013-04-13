@@ -40,8 +40,9 @@ namespace Edvs
 			}
 		private:
 			void threadMain(const EventStream& stream, callback_t callback) {
-				std::vector<edvs_event_t> buffer;
+				std::vector<edvs_event_t> buffer(1024);
 				while(running_) {
+					buffer.resize(1024);
 					stream.read(buffer);
 					callback(buffer);
 				}

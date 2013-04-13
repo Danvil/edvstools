@@ -46,12 +46,12 @@ void EdvsVisual::OnEvent(const std::vector<Edvs::Event>& newevents)
 	boost::interprocess::scoped_lock<boost::mutex> lock(events_mtx_);
 	events_.insert(events_.end(), newevents.begin(), newevents.end());
 
-	for(const auto& e : newevents) {
-		std::cout << e.t << ", ";
-	}
-	std::cout << std::endl;
-	// if(!newevents.empty())
-		// std::cout << newevents.back().time << std::endl;
+	// for(const auto& e : newevents) {
+	// 	std::cout << e.t << ", ";
+	// }
+	// std::cout << std::endl;
+	if(!newevents.empty())
+		std::cout << newevents.back().t << std::endl;
 }
 
 int DecayComponent(int current, int target, int decay)

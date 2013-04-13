@@ -435,6 +435,7 @@ ssize_t edvs_file_streaming_read(edvs_file_streaming_t* s, edvs_event_t* events,
 	else {
 		s->current_event_time += s->dt;
 	}
+	//printf("t=%ld\n",s->current_event_time);
 	size_t num_total = 0;
 	do {
 		// read more from stream
@@ -445,6 +446,7 @@ ssize_t edvs_file_streaming_read(edvs_file_streaming_t* s, edvs_event_t* events,
 		}
 		// find first event with time greater equal to desires time
 		size_t n = 0;
+		//printf("ti=%ld\n",s->unprocessed[n].t);
 		while( n < s->num_curr
 			&& num_total < events_max
 			&& s->unprocessed[n].t < s->current_event_time
@@ -460,12 +462,13 @@ ssize_t edvs_file_streaming_read(edvs_file_streaming_t* s, edvs_event_t* events,
 		events += n;
 		// move remaining events in unprocessed buffer to start
 		memmove(
-			(void*)(s->unprocessed + n),
-			(const void*)s->unprocessed,
+			(void*)s->unprocessed,
+			(const void*)(s->unprocessed + n),
 			(s->num_curr - n)*sizeof(edvs_event_t));
 		s->num_curr -= n;
 	}
 	while(s->num_curr == 0);
+	//printf("num_total=%zd\n",num_total);
 	return num_total;
 }
 
