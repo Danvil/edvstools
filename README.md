@@ -43,16 +43,16 @@ To connect to the eDVS sensor over serial port and display events
 
 	ShowRetina/ShowRetina --device serial --link /dev/ttyUSB0
 
-## Using the library in one of your own projects
+## Capturing events (C++)
 
-Below is a small sample which demonstrates the usage of the edvs connection
+The following sample demonstrates the usage of the C++ edvs event stream.
 
 	#include <Edvs/EventCapture.hpp>
 	#include <boost/bind.hpp>
 	#include <iostream>
 
 	// handle events
-	void OnEvent(const std::vector<Edvs::RawEvent>& events)
+	void OnEvent(const std::vector<Edvs::Event>& events)
 	{
 		std::cout << "Got " << events.size() << " events: ";
 		for(std::vector<Edvs::RawEvent>::const_iterator it=events.begin(); it!=events.end(); it++) {
@@ -65,8 +65,8 @@ Below is a small sample which demonstrates the usage of the edvs connection
 	int main(int argc, char* argv[])
 	{
 		// run capture
-		Edvs::DeviceHandle dh = Edvs::OpenNetworkDevice("192.168.201.62:56001");
-		Edvs::StartEventCapture(dh, &OnEvent);
+		Edvs::EventStream stream("192.168.201.62:56000");
+		Edvs::EventCapture capture(stream, &OnEvent);
 		// press q to quit
 		std::string str;
 		while(str != "q") {
@@ -74,4 +74,31 @@ Below is a small sample which demonstrates the usage of the edvs connection
 			std::cin >> str;
 		}
 		return 1;
+	}
+
+## Capturing events (C)
+
+The following sample demonstrates the usage of the C++ edvs event stream.
+
+// #include <signal.h>
+// #include <stdio.h>
+
+	int main(int argc, char** argv)
+	{
+		if(argc != 2) {
+			printf("Wrong usage\n");
+			return EXIT_FAILURE;
+		}
+		edvs_stream_handle s = edvs_open(argv[1]);
+		size_t n = 128;
+		edvs_event_t* events = (edvs_event_t*)malloc(n*sizeof(edvs_event_t));
+		size_t num = 0;
+		while(num < 10000) {
+			ssize_t m = edvs_read(s, events, n);
+			printf("%zd/%d events\n", num, 10000);
+			num += m;
+		}
+		edvs_close(s);
+		free(events);
+		return EXIT_SUCCESS;
 	}

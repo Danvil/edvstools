@@ -612,28 +612,3 @@ ssize_t edvs_read(edvs_stream_handle s, edvs_event_t* events, size_t n)
 }
 
 // ----- ----- ----- ----- ----- ----- ----- ----- ----- //
-
-// #include <signal.h>
-// #include <stdio.h>
-
-// int main(int argc, char** argv)
-// {
-// 	if(argc != 2) {
-// 		printf("Wrong usage\n");
-// 		return EXIT_FAILURE;
-// 	}
-// 	edvs_stream_handle s = edvs_open(argv[1]);
-// 	size_t n = 128;
-// 	edvs_event_t* events = (edvs_event_t*)malloc(n*sizeof(edvs_event_t));
-// 	size_t num = 0;
-// 	while(num < 10000) {
-// 		ssize_t m = edvs_read(s, events, n);
-// 		printf("%zd/%d events\n", num, 10000);
-// 		num += m;
-// 	}
-// 	edvs_close(s);
-// 	free(events);
-// 	return EXIT_SUCCESS;
-// }
-
-// ----- ----- ----- ----- ----- ----- ----- ----- ----- //
