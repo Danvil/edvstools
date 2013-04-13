@@ -37,15 +37,15 @@ All apt-get dependencies in one line: `sudo apt-get install libboost-all-dev lib
 
 To connect to the eDVS sensor over network and display events
 
-	ShowRetina/ShowRetina --uri 192.168.201.62:56000
+	ShowEvents/ShowEvents --uri 192.168.201.62:56000
 
 To connect to the eDVS sensor over serial port and display events
 
-	ShowRetina/ShowRetina --uri /dev/ttyUSB0?baudrate=4000000
+	ShowEvents/ShowEvents --uri /dev/ttyUSB0?baudrate=4000000
 
 To replay an previously saved event file
 
-	ShowRetina/ShowRetina --uri /path/to/events
+	ShowEvents/ShowEvents --uri /path/to/events
 
 ## Capturing events (C++)
 

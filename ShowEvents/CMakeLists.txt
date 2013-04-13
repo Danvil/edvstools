@@ -1,4 +1,4 @@
-PROJECT(ShowRetina)
+PROJECT(ShowEvents)
 
 find_package(Qt4 REQUIRED)
 
