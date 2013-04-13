@@ -40,7 +40,7 @@ namespace Edvs
 			return impl_ && impl_->h;
 		}
 
-		bool eof() const {
+		bool eos() const {
 			return !impl_ || edvs_eos(impl_->h);
 		}
 
