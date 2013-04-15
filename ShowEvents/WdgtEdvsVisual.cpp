@@ -32,7 +32,7 @@ EdvsVisual::EdvsVisual(const Edvs::EventStream& dh, QWidget *parent)
 	// start capture
 	edvs_event_stream_ = dh;
 	edvs_event_capture_ = Edvs::EventCapture(edvs_event_stream_,
-		std::bind(&EdvsVisual::OnEvent, this, std::placeholders::_1));
+		boost::bind(&EdvsVisual::OnEvent, this, _1));
 }
 
 EdvsVisual::~EdvsVisual()

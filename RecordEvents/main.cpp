@@ -2,6 +2,7 @@
 #include <Edvs/EventCapture.hpp>
 #include <Edvs/EventIO.hpp>
 #include <boost/program_options.hpp>
+#include <boost/bind.hpp>
 #include <iostream>
 #include <cstdio>
 
@@ -52,7 +53,8 @@ int main(int argc, char* argv[])
 
 	std::cout << "Recording... Press Enter to stop." << std::endl;
 	{
-		Edvs::EventCapture capture(stream, &OnEvent);
+		Edvs::EventCapture capture(stream,
+			boost::bind(&OnEvent, _1));
 		std::getchar();
 	}
 
