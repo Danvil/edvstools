@@ -51,19 +51,20 @@ namespace Edvs
 		void read(std::vector<edvs_event_t>& v) const {
 			if(!is_open()) {
 				v.clear();
-				return;
 			}
-			ssize_t m = edvs_read(impl_->h, v.data(), v.size());
-			v.resize(m);
+			else {
+				ssize_t m = edvs_read(impl_->h, v.data(), v.size());
+				if(m >= 0) {
+					v.resize(m);
+				}
+				else {
+					v.clear();
+				}
+			}
 		}
 
 		std::vector<edvs_event_t> read() const {
-			std::vector<edvs_event_t> v;
-			if(!is_open()) {
-				return v;
-			}
-			size_t num = 1024; // FIXME how many can we read?
-			v.resize(num);
+			std::vector<edvs_event_t> v(1024); // FIXME how many can we read?
 			read(v);
 			return v;
 		}
