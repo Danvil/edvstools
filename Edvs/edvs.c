@@ -53,7 +53,7 @@ int edvs_net_open(const char* address, int port)
  * @param n maximum number of bytes to read 
  * @return the number of bytes actually read or -1 on failure
  */
-ssize_t edvs_net_read(int sockfd, char* data, size_t n)
+ssize_t edvs_net_read(int sockfd, unsigned char* data, size_t n)
 {
 	ssize_t m = recv(sockfd, data, n, 0);
 	if(m < 0) {
@@ -138,7 +138,7 @@ int edvs_serial_open(const char* path, int baudrate)
 }
 
 /** Reads data from the serial port */
-ssize_t edvs_serial_read(int port, char* data, size_t n)
+ssize_t edvs_serial_read(int port, unsigned char* data, size_t n)
 {
 	ssize_t m = read(port, data, n);
 	if(m < 0) {
@@ -185,7 +185,7 @@ typedef struct {
 } edvs_device_t;
 
 /** Reads data from an edvs device */
-ssize_t edvs_device_read(edvs_device_t* dh, char* data, size_t n)
+ssize_t edvs_device_read(edvs_device_t* dh, unsigned char* data, size_t n)
 {
 	switch(dh->type) {
 	case EDVS_NETWORK_DEVICE:
@@ -229,7 +229,7 @@ int edvs_device_close(edvs_device_t* dh)
 typedef struct {
 	edvs_device_t* device;
 	int timestamp_mode;
-	char* buffer;
+	unsigned char* buffer;
 	size_t length;
 	size_t offset;
 	uint64_t current_time;
@@ -246,7 +246,7 @@ edvs_device_streaming_t* edvs_device_streaming_start(edvs_device_t* dh)
 	s->device = dh;
 	s->timestamp_mode = 2;
 	s->length = 8192;
-	s->buffer = (char*)malloc(s->length);
+	s->buffer = (unsigned char*)malloc(s->length);
 	s->offset = 0;
 	s->current_time = 0;
 	s->last_timestamp = 0;
@@ -283,7 +283,7 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 		: 0);
 	const unsigned int cNumBytesPerEvent = 2 + cNumBytesTimestamp;
 	// read bytes
-	char* buffer = s->buffer;
+	unsigned char* buffer = s->buffer;
 	size_t num_bytes_events = n*sizeof(edvs_event_t);
 	size_t num_bytes_buffer = s->length - s->offset;
 	size_t num_read = (num_bytes_buffer < num_bytes_events ? num_bytes_buffer : num_bytes_events);
@@ -309,13 +309,22 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 		// read timestamp
 		uint64_t timestamp;
 		if(timestamp_mode == 1) {
-			timestamp = (buffer[i+2] << 8) | buffer[i+3];
+			timestamp =
+				  ((uint64_t)(buffer[i+2]) <<  8)
+				|  (uint64_t)(buffer[i+3]);
 		}
 		else if(timestamp_mode == 2) {
-			timestamp = (buffer[i+2] << 16) | (buffer[i+3] << 8) | buffer[i+4];
+			timestamp =
+				  ((uint64_t)(buffer[i+2]) << 16)
+				| ((uint64_t)(buffer[i+3]) <<  8)
+				|  (uint64_t)(buffer[i+4]);
 		}
 		else if(timestamp_mode == 3) {
-			timestamp = (buffer[i+2] << 24) | (buffer[i+3] << 16) | (buffer[i+4] << 8) | buffer[i+5];
+			timestamp =
+				  ((uint64_t)(buffer[i+2]) << 24)
+				| ((uint64_t)(buffer[i+3]) << 16)
+				| ((uint64_t)(buffer[i+4]) <<  8)
+				|  (uint64_t)(buffer[i+5]);
 		}
 		else {
 			timestamp = 0;
@@ -325,13 +334,14 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 			s->current_time = 1;
 		}
 		else {
-			if(timestamp > s->last_timestamp) {
+			if(timestamp >= s->last_timestamp) {
 				s->current_time += (timestamp - s->last_timestamp);
 			}
 			else {
 				s->current_time += 2 * timestamp;
 			}
 		}
+//		printf("old=%lu \tnew=%lu \tt=%lu\n", s->last_timestamp, timestamp, s->current_time);
 		s->last_timestamp = timestamp;
 		// create event
 		event_it->t = s->current_time;
