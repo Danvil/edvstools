@@ -284,7 +284,7 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 	const unsigned int cNumBytesPerEvent = 2 + cNumBytesTimestamp;
 	// read bytes
 	unsigned char* buffer = s->buffer;
-	size_t num_bytes_events = n*sizeof(edvs_event_t);
+	size_t num_bytes_events = n*cNumBytesPerEvent;
 	size_t num_bytes_buffer = s->length - s->offset;
 	size_t num_read = (num_bytes_buffer < num_bytes_events ? num_bytes_buffer : num_bytes_events);
 	ssize_t bytes_read = edvs_device_read(s->device, buffer + s->offset, num_read);
@@ -330,8 +330,8 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 			timestamp = 0;
 		}
 		// wrap timestamp correctly
-		if(s->current_time == 0) {
-			s->current_time = 1;
+		if(s->current_time < 8) { // ignore timestamps of first 8 events
+			s->current_time ++;
 		}
 		else {
 			if(timestamp >= s->last_timestamp) {

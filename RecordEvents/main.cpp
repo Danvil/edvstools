@@ -11,6 +11,7 @@ bool verbose = false;
 
 void OnEvent(const std::vector<Edvs::Event>& events)
 {
+//	std::cout << all_events.size() << " + " << events.size() << std::endl;
 	all_events.insert(all_events.end(), events.begin(), events.end());
 	if(verbose) {
 		std::cout << "Got " << events.size() << " (total=" << all_events.size() << ")" << std::endl;
