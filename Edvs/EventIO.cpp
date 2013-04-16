@@ -27,7 +27,7 @@ namespace Edvs
 		std::vector<edvs_event_t> buffer(num_max);
 		while(true) {
 			ssize_t m = edvs_file_read(f, buffer.data(), num_max);
-			v.insert(v.end(), buffer.begin(), buffer.begin() + num_max);
+			v.insert(v.end(), buffer.begin(), buffer.begin() + m);
 			if(m != num_max) {
 				break;
 			}
