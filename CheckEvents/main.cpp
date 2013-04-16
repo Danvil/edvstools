@@ -55,6 +55,7 @@ int main(int argc, char** argv)
 			uint64_t last_t = events.front().t;
 			for(std::size_t i=0; i<events.size(); i++) {
 				uint64_t t = events[i].t;
+				//if(t - last_t > 1000) std::cout << "t=" << t << ", dt=" << t - last_t << std::endl;
 				if(t < last_t) {
 					std::cout << "\tevent " << i << ": " << last_t << " -> " << t << std::endl;
 				}
@@ -85,7 +86,7 @@ int main(int argc, char** argv)
 			std::cout << "\t" << "sqrt(variance): " << std::sqrt(acc::variance(a)) << " µs" << std::endl;
 			auto histogram = acc::p_square_cumulative_distribution(a);
 			std::cout << "\t" << "histogram (20% bins): ";
-			for(std::size_t i=1; i<histogram.size(); ++i) {
+			for(std::size_t i=0; i<histogram.size(); ++i) {
 				std::cout << (int)histogram[i].first << " µs";
 				if(i+1 < histogram.size()) {
 					std::cout << " - ";
