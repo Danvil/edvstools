@@ -440,7 +440,11 @@ ssize_t edvs_file_streaming_read(edvs_file_streaming_t* s, edvs_event_t* events,
 {
 	// get time
 	if(s->dt == 0) {
-		s->current_event_time = ((clock() - s->start_time)*1000000)/CLOCKS_PER_SEC;
+		uint64_t nt = ((clock() - s->start_time)*1000000)/CLOCKS_PER_SEC;
+		if(nt == s->current_event_time) {
+			return 0;
+		}
+		s->current_event_time = nt;
 	}
 	else {
 		s->current_event_time += s->dt;
