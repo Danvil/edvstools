@@ -50,6 +50,14 @@ int main(int argc, char** argv)
 
 		std::cout << "Number of events: " << events.size() << std::endl;
 		
+		if(events.size() > 0) {
+			std::cout << "Timespan: [" << events.front().t << "," << events.back().t << "]" << std::endl;
+		}
+		std::cout << "First 10 timestamps:" << std::endl;
+		for(unsigned i=0; i<std::min<unsigned>(10,events.size()); i++) {
+			std::cout << "\t" << events[i].t << std::endl;
+		}
+
 		{
 			std::cout << "TIMESTAMP ORDER" << std::endl;
 			uint64_t last_t = events.front().t;
