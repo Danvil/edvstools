@@ -397,7 +397,8 @@ ssize_t edvs_file_write(FILE* fh, const edvs_event_t* events, size_t n)
 typedef struct {
 	FILE* fh;
 	int is_eof;
-	uint64_t dt;
+	uint64_t dt; // 0=realtime, else use dt to increase time each call to read
+	float timescale; // used to replay slowed down
 	edvs_event_t* unprocessed;
 	size_t num_max;
 	size_t num_curr;
@@ -416,7 +417,7 @@ typedef struct {
  * @param dt
  * @return handle 
  */
-edvs_file_streaming_t* edvs_file_streaming_start(const char* filename, uint64_t dt)
+edvs_file_streaming_t* edvs_file_streaming_start(const char* filename, uint64_t dt, float ts)
 {
 	edvs_file_streaming_t *s = (edvs_file_streaming_t*)malloc(sizeof(edvs_file_streaming_t));
 	if(s == 0) {
@@ -425,6 +426,7 @@ edvs_file_streaming_t* edvs_file_streaming_start(const char* filename, uint64_t 
 	s->fh = fopen(filename, "rb");
 	s->is_eof = 0;
 	s->dt = dt;
+	s->timescale = ts;
 	s->num_max = 1024;
 	s->unprocessed = (edvs_event_t*)malloc(s->num_max*sizeof(edvs_event_t));
 	s->num_curr = 0;
@@ -440,7 +442,7 @@ ssize_t edvs_file_streaming_read(edvs_file_streaming_t* s, edvs_event_t* events,
 {
 	// get time
 	if(s->dt == 0) {
-		uint64_t nt = ((clock() - s->start_time)*1000000)/CLOCKS_PER_SEC;
+		uint64_t nt = (uint64_t)(s->timescale*(float)(((clock() - s->start_time)*1000000)/CLOCKS_PER_SEC));
 		if(nt == s->current_event_time) {
 			return 0;
 		}
@@ -578,9 +580,12 @@ edvs_stream_handle edvs_open(const char* uri)
 			// FIXME correct URI parsing!
 			dt = atoi(pquest+1+3);
 		}
+		// parse ts
+		// FIXME correct URI parsing!
+		float ts = 0.2f;
 		// open
-		printf("Opening event file '%s', using dt=%lu\n", fn, dt);
-		edvs_file_streaming_t* ds = edvs_file_streaming_start(fn, dt);
+		printf("Opening event file '%s', using dt=%lu, ts=%f\n", fn, dt, ts);
+		edvs_file_streaming_t* ds = edvs_file_streaming_start(fn, dt, ts);
 		free(fn);
 		struct edvs_stream_t* s = (struct edvs_stream_t*)malloc(sizeof(struct edvs_stream_t));
 		s->type = EDVS_FILE_STREAM;
