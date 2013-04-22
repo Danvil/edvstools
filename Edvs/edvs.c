@@ -559,11 +559,25 @@ edvs_stream_handle edvs_open(const char* uri)
 	}
 	// else -> file
 	{
-		// FIXME correct URI parsing
-		// FIXME parse dt
+		const char *pquest = strstr(uri, "?");
+		// parse filename
+		size_t fn_len = strlen(uri);
+		if(pquest != NULL) {
+			fn_len = pquest - uri;
+		}
+		char *fn = (char*)malloc(fn_len+1);
+		memcpy(fn, uri, fn_len);
+		fn[fn_len] = '\0';
+		// parse dt
 		uint64_t dt = 0;
-		printf("Opening event file '%s', using dt=%lu\n", uri, dt);
-		edvs_file_streaming_t* ds = edvs_file_streaming_start(uri, dt);
+		if(pquest != NULL) {
+			// FIXME correct URI parsing!
+			dt = atoi(pquest+1+3);
+		}
+		// open
+		printf("Opening event file '%s', using dt=%lu\n", fn, dt);
+		edvs_file_streaming_t* ds = edvs_file_streaming_start(fn, dt);
+		free(fn);
 		struct edvs_stream_t* s = (struct edvs_stream_t*)malloc(sizeof(struct edvs_stream_t));
 		s->type = EDVS_FILE_STREAM;
 		s->handle = (uintptr_t)ds;
