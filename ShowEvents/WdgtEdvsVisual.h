@@ -21,13 +21,15 @@ public:
 
 public Q_SLOTS:
 	void Update();
+	void Display();
 
 private:
 	Edvs::EventStream edvs_event_stream_;
 	Edvs::EventCapture edvs_event_capture_;
 	std::vector<Edvs::Event> events_;
 	boost::mutex events_mtx_;
-	QTimer timer_;
+	QTimer timer_update_;
+	QTimer timer_display_;
 	QImage image_;
 
 private:

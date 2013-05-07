@@ -1,12 +1,14 @@
 #include "WdgtEdvsVisual.h"
 #include <boost/interprocess/sync/scoped_lock.hpp>
 #include <iostream>
+#include <time.h>
 
 
 const unsigned int RetinaSize = 128;
-const int cDecay = 4;
-const int cDisplaySize = 512;
-const int cUpdateInterval = 1;
+const int cDecay = 16;
+const int cDisplaySize = 1024;
+const int cUpdateInterval = 10;
+const int cDisplayInterval = 20;
 
 // blue/yellow color scheme
 // const QRgb cColorMid = qRgb(0, 0, 0);
@@ -25,9 +27,13 @@ EdvsVisual::EdvsVisual(const Edvs::EventStream& dh, QWidget *parent)
 
 	image_ = QImage(RetinaSize, RetinaSize, QImage::Format_RGB32);
 
-	timer_.connect(&timer_, SIGNAL(timeout()), this, SLOT(Update()));
-	timer_.setInterval(cUpdateInterval);
-	timer_.start();
+	connect(&timer_update_, SIGNAL(timeout()), this, SLOT(Update()));
+	timer_update_.setInterval(cUpdateInterval);
+	timer_update_.start();
+
+	connect(&timer_display_, SIGNAL(timeout()), this, SLOT(Display()));
+	timer_display_.setInterval(cDisplayInterval);
+	timer_display_.start();
 
 	// start capture
 	edvs_event_stream_ = dh;
@@ -45,13 +51,20 @@ void EdvsVisual::OnEvent(const std::vector<Edvs::Event>& newevents)
 	// protect common vector with a mutex to avoid race conditions
 	boost::interprocess::scoped_lock<boost::mutex> lock(events_mtx_);
 	events_.insert(events_.end(), newevents.begin(), newevents.end());
+	// timespec ts;
+	// ts.tv_sec = 0;
+	// ts.tv_nsec = 1000;
+	// nanosleep(&ts, &ts);
 
-	// for(const auto& e : newevents) {
-	// 	std::cout << e.t << ", ";
-	// }
-	// std::cout << std::endl;
-	if(!newevents.empty())
-		std::cout << newevents.back().t << std::endl;
+	// print time information
+	if(!newevents.empty()) {
+		static uint64_t last_time = 0;
+		uint64_t current_time = newevents.back().t;
+		if(current_time >= last_time + 1000000) {
+			std::cout << static_cast<float>(current_time)/1000000.0f << std::endl;
+			last_time = current_time;
+		}
+	}
 }
 
 int DecayComponent(int current, int target, int decay)
@@ -76,13 +89,6 @@ QRgb DecayColor(QRgb color, QRgb target, int decay)
 
 void EdvsVisual::Update()
 {
-	// apply decay
-	// FIXME make if faster by not using pixel/setPixel!
-	for(int y=0; y<image_.height(); y++) {
-		for(int x=0; x<image_.width(); x++) {
-			image_.setPixel(x, y, DecayColor(image_.pixel(x, y), cColorMid, cDecay));
-		}
-	}
 	// write events
 	{
 		boost::interprocess::scoped_lock<boost::mutex> lock(events_mtx_);
@@ -91,8 +97,16 @@ void EdvsVisual::Update()
 		}
 		events_.clear();
 	}
-	// rescale so that we see more :)
-	QImage big = image_.scaled(cDisplaySize, cDisplaySize);
-	// display
-	ui.label->setPixmap(QPixmap::fromImage(big));
+}
+
+void EdvsVisual::Display()
+{
+	// apply decay
+	unsigned int* bits = (unsigned int*)image_.bits();
+	const unsigned int N = image_.height() * image_.width();
+	for(int i=0; i<N; i++, bits++) {
+		*bits = DecayColor(*bits, cColorMid, cDisplayInterval*cDecay);
+	}
+	// rescale so that we see more :) and display
+	ui.label->setPixmap(QPixmap::fromImage(image_.scaled(cDisplaySize, cDisplaySize)));
 }
