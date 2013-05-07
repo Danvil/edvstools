@@ -59,6 +59,20 @@ int main(int argc, char** argv)
 		}
 
 		{
+			std::cout << "JUMPS" << std::endl;
+			int64_t last_t = events.front().t;
+			for(std::size_t i=0; i<events.size(); i++) {
+				int64_t t = events[i].t;
+				//if(t - last_t > 1000) std::cout << "t=" << t << ", dt=" << t - last_t << std::endl;
+				if(std::abs(t - last_t) > 1000000) {
+					std::cout << "\tevent " << i << ": " << last_t << " -> " << t << std::endl;
+				}
+				last_t = t;
+			}
+			std::cout << std::endl;
+		}
+
+		{
 			std::cout << "TIMESTAMP ORDER" << std::endl;
 			uint64_t last_t = events.front().t;
 			for(std::size_t i=0; i<events.size(); i++) {
@@ -69,7 +83,7 @@ int main(int argc, char** argv)
 				}
 				last_t = t;
 			}
-			std::cout << "TIMESTAMP ORDER" << std::endl;
+			std::cout << std::endl;
 		}
 
 		{
