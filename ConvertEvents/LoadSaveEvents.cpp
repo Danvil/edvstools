@@ -67,7 +67,7 @@ inline uint64_t parse_timestamp_fast(StrIt it, const StrIt& end) {
 
 bool jc_has_id(const std::string& line)
 {
-	return false;
+	return line.length() >= 21;
 }
 
 std::vector<Edvs::Event> LoadEventsJC(const std::string& filename, bool unwrap_timestamps)
@@ -88,17 +88,20 @@ std::vector<Edvs::Event> LoadEventsJC(const std::string& filename, bool unwrap_t
 	// uint64_t start_time;
 	while(getline(ifs, line)) {
 		bool has_id = jc_has_id(line);
-		int offset = (has_id ? 2 : 0);
 		if(has_id) {
 			e.id = static_cast<uint8_t>(line[0] - '0');
+			e.parity = (line[2] == '0' ? 0 : 1);
+			e.x = static_cast<uint16_t>(parse_coord_fast(line[4], line[5], line[6]));
+			e.y = static_cast<uint16_t>(parse_coord_fast(line[8], line[9], line[10]));
+			e.t = parse_timestamp_fast(line.rbegin(), line.rbegin() + 8);
 		}
 		else {
 			e.id = 0;
+			e.x = static_cast<uint16_t>(parse_coord_fast(line[0], line[1], line[2]));
+			e.y = static_cast<uint16_t>(parse_coord_fast(line[4], line[5], line[6]));
+			e.parity = (line[8] == '0' ? 0 : 1);
+			e.t = parse_timestamp_fast(line.rbegin(), line.rbegin() + 8);
 		}
-		e.x = static_cast<uint16_t>(parse_coord_fast(line[offset+0], line[offset+1], line[offset+2]));
-		e.y = static_cast<uint16_t>(parse_coord_fast(line[offset+4], line[offset+5], line[offset+6]));
-		e.parity = (line[offset+8] == '0' ? 0 : 1);
-		e.t = parse_timestamp_fast(line.rbegin(), line.rbegin() + 8);
 		if(unwrap_timestamps) {
 			e.t = unroller(e.t);
 		}
