@@ -5,7 +5,7 @@
 
 
 const unsigned int RetinaSize = 128;
-const int cDecay = 16;
+const int cDecay = 24;
 const int cDisplaySize = 1024;
 const int cUpdateInterval = 10;
 const int cDisplayInterval = 20;
