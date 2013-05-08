@@ -1,8 +1,8 @@
 #ifndef WdgtCameraParameters_H
 #define WdgtCameraParameters_H
 
-#include <Edvs.h>
-#include <Edvs/Tools/Omnirob.hpp>
+#include <Edvs/Event.hpp>
+#include "Omnirob.hpp"
 #include <QtGui/QWidget>
 #include "ui_WdgtCameraParameters.h"
 

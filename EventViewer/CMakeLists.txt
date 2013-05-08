@@ -3,7 +3,8 @@ PROJECT(EventViewer)
 find_package(Qt4 REQUIRED)
 
 INCLUDE_DIRECTORIES(
-	${Edvs_SOURCE_DIR}
+	${EIGEN_INCLUDE_DIR}
+	${edvstools_SOURCE_DIR}
 )
 
 SET(QT_USE_QTOPENGL TRUE)
@@ -12,6 +13,7 @@ SET(EventViewer_SOURCES
 	main.cpp
 	WdgtEventViewer.cpp
 	WdgtCameraParameters.cpp
+	../ConvertEvents/LoadSaveEvents.cpp
 )
 SET(EventViewer_HEADERS
 	WdgtEventViewer.h

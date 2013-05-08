@@ -1,8 +1,8 @@
 #ifndef WDGTEVENTVIEWER_H
 #define WDGTEVENTVIEWER_H
 
-#include <Edvs/Event.h>
-#include <Edvs/Tools/Omnirob.hpp>
+#include <Edvs/Event.hpp>
+#include "Omnirob.hpp"
 #include <QtGui/QWidget>
 #include <QtCore/QTimer>
 #include "ui_WdgtEventViewer.h"
