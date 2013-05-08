@@ -13,8 +13,8 @@ namespace Edvs
 inline std::ostream& operator<<(std::ostream& os, const Edvs::Event& e)
 {
 	os << "[t=" << e.t
-		<< ", id=" << e.id
-		<< ", p=" << e.parity
+		<< ", id=" << static_cast<unsigned int>(e.id)
+		<< ", p=" << static_cast<unsigned int>(e.parity)
 		<< ", (" << e.x << ", " << e.y << ")]";
 	return os;
 }
