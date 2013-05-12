@@ -1,4 +1,5 @@
 #include "edvs.h"
+#include "edvs_impl.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -172,18 +173,6 @@ int edvs_serial_close(int port)
 
 // ----- ----- ----- ----- ----- ----- ----- ----- ----- //
 
-/** Type of edvs connection */
-typedef enum {
-	EDVS_NETWORK_DEVICE, // network socket connection
-	EDVS_SERIAL_DEVICE // serial port connection
-} device_type;
-
-/** Edvs device handle */
-typedef struct {
-	int handle;
-	device_type type;
-} edvs_device_t;
-
 /** Reads data from an edvs device */
 ssize_t edvs_device_read(edvs_device_t* dh, unsigned char* data, size_t n)
 {
@@ -198,7 +187,7 @@ ssize_t edvs_device_read(edvs_device_t* dh, unsigned char* data, size_t n)
 }
 
 /** Writes data to an edvs device */
-ssize_t edvs_device_write(edvs_device_t* dh, char* data, size_t n)
+ssize_t edvs_device_write(edvs_device_t* dh, const char* data, size_t n)
 {
 	switch(dh->type) {
 	case EDVS_NETWORK_DEVICE:
@@ -224,17 +213,6 @@ int edvs_device_close(edvs_device_t* dh)
 }
 
 // ----- ----- ----- ----- ----- ----- ----- ----- ----- //
-
-/** Device streaming parameters and state */
-typedef struct {
-	edvs_device_t* device;
-	int timestamp_mode;
-	unsigned char* buffer;
-	size_t length;
-	size_t offset;
-	uint64_t current_time;
-	uint64_t last_timestamp;
-} edvs_device_streaming_t;
 
 /** Starts streaming events from an edvs device */
 edvs_device_streaming_t* edvs_device_streaming_start(edvs_device_t* dh)
@@ -272,7 +250,7 @@ edvs_device_streaming_t* edvs_device_streaming_start(edvs_device_t* dh)
 }
 
 /** Reads events from an edvs device */
-ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* events, size_t n)
+ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* events, size_t n, edvs_special_t* special, size_t* ns)
 {
 	const int timestamp_mode = s->timestamp_mode;
 	const unsigned char cHighBitMask = 0x80; // 10000000
@@ -282,6 +260,8 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 		? (timestamp_mode + 1)
 		: 0);
 	const unsigned int cNumBytesPerEvent = 2 + cNumBytesTimestamp;
+	const unsigned int cNumBytesPerSpecial = 2 + cNumBytesTimestamp + 1 + 16;
+	const unsigned int cNumBytesAhead = (cNumBytesPerEvent > cNumBytesPerSpecial) ? cNumBytesPerEvent : cNumBytesPerSpecial;
 	// read bytes
 	unsigned char* buffer = s->buffer;
 	size_t num_bytes_events = n*cNumBytesPerEvent;
@@ -295,40 +275,52 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 	// parse events
 	ssize_t i = 0; // index of current byte
 	edvs_event_t* event_it = events;
-	while(i+cNumBytesPerEvent < bytes_read) {
+	edvs_special_t* special_it = special;
+	while(i+cNumBytesAhead < bytes_read) {
 		// get to bytes
 		unsigned char a = buffer[i];
 		unsigned char b = buffer[i + 1];
+//		printf("e: %d %d\n", a, b);
+		i += 2;
 		// check for and parse 0yyyyyyy pxxxxxxx
 		if(a & cHighBitMask) { // check that the high bit o first byte is 0
 			// the serial port missed a byte somewhere ...
 			// skip one byte to jump to the next event
-			i ++;
+			i --;
 			continue;
+		}
+		// check for special data
+		size_t special_data_len = 0;
+		if(a == 0 && b == 0) {
+			// get special data length
+			special_data_len = (buffer[i] & 0x0F) - cNumBytesTimestamp; // HACK assuming special data always sends timestamp!
+			i ++;
 		}
 		// read timestamp
 		uint64_t timestamp;
 		if(timestamp_mode == 1) {
 			timestamp =
-				  ((uint64_t)(buffer[i+2]) <<  8)
-				|  (uint64_t)(buffer[i+3]);
+				  ((uint64_t)(buffer[i  ]) <<  8)
+				|  (uint64_t)(buffer[i+1]);
 		}
 		else if(timestamp_mode == 2) {
 			timestamp =
-				  ((uint64_t)(buffer[i+2]) << 16)
-				| ((uint64_t)(buffer[i+3]) <<  8)
-				|  (uint64_t)(buffer[i+4]);
+				  ((uint64_t)(buffer[i  ]) << 16)
+				| ((uint64_t)(buffer[i+1]) <<  8)
+				|  (uint64_t)(buffer[i+2]);
+//			printf("t: %d %d %d -> %ld\n", buffer[i], buffer[i+1], buffer[i+2], timestamp);
 		}
 		else if(timestamp_mode == 3) {
 			timestamp =
-				  ((uint64_t)(buffer[i+2]) << 24)
-				| ((uint64_t)(buffer[i+3]) << 16)
-				| ((uint64_t)(buffer[i+4]) <<  8)
-				|  (uint64_t)(buffer[i+5]);
+				  ((uint64_t)(buffer[i  ]) << 24)
+				| ((uint64_t)(buffer[i+1]) << 16)
+				| ((uint64_t)(buffer[i+2]) <<  8)
+				|  (uint64_t)(buffer[i+3]);
 		}
 		else {
 			timestamp = 0;
 		}
+		i += cNumBytesTimestamp;
 		// wrap timestamp correctly
 		if(s->current_time < 8) { // ignore timestamps of first 8 events
 			s->current_time ++;
@@ -343,15 +335,30 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 		}
 //		printf("old=%lu \tnew=%lu \tt=%lu\n", s->last_timestamp, timestamp, s->current_time);
 		s->last_timestamp = timestamp;
-		// create event
-		event_it->t = s->current_time;
-		event_it->x = (uint16_t)(b & cLowerBitsMask);
-		event_it->y = (uint16_t)(a & cLowerBitsMask);
-		event_it->parity = ((b & cHighBitMask) ? 1 : 0);
-		event_it->id = 0;
-		event_it++;
-		// increment index
-		i += cNumBytesPerEvent;
+
+		if(special != 0 && ns != 0 && a == 0 && b == 0) {
+			// create special
+			special_it->t = s->current_time;
+			special_it->n = special_data_len;
+			// read special data
+//			printf("s: %ld -> ", special_it->n);
+			for(size_t k=0; k<special_it->n; k++) {
+				special_it->data[k] = buffer[i+k];
+//				printf("%d ", special_it->data[k]);
+			}
+//			printf("\n");
+			i += special_it->n;
+			special_it++;
+		}
+		else {
+			// create event
+			event_it->t = s->current_time;
+			event_it->x = (uint16_t)(b & cLowerBitsMask);
+			event_it->y = (uint16_t)(a & cLowerBitsMask);
+			event_it->parity = ((b & cHighBitMask) ? 1 : 0);
+			event_it->id = 0;
+			event_it++;
+		}
 	}
 	// i is now the number of processed bytes
 	s->offset = bytes_read - i;
@@ -360,14 +367,30 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 			buffer[j] = buffer[i + j];
 		}
 	}
+	// return
+	if(ns != 0) {
+		if(special != 0) {
+			*ns = special_it - special;
+		}
+		else {
+			*ns = 0;
+		}
+	}
 	return event_it - events;
+}
+
+int edvs_device_streaming_write(edvs_device_streaming_t* s, const char* cmd, size_t n)
+{
+	if(edvs_device_write(s->device, cmd, n) != n)
+		return -1;
+	return 0;
 }
 
 /** Stops streaming from an edvs device */
 int edvs_device_streaming_stop(edvs_device_streaming_t* s)
 {
-	if(edvs_device_write(s->device, "E-\n", 3) != 3)
-		return -1;
+	int r = edvs_device_streaming_write(s, "E-\n", 3);
+	if(r != 0) return r;
 	free(s->buffer);
 	free(s);
 	return 0;
@@ -393,18 +416,6 @@ ssize_t edvs_file_write(FILE* fh, const edvs_event_t* events, size_t n)
 // ----- ----- ----- ----- ----- ----- ----- ----- ----- //
 
 #include <time.h>
-
-typedef struct {
-	FILE* fh;
-	int is_eof;
-	uint64_t dt; // 0=realtime, else use dt to increase time each call to read
-	float timescale; // used to replay slowed down
-	edvs_event_t* unprocessed;
-	size_t num_max;
-	size_t num_curr;
-	clock_t start_time;
-	uint64_t current_event_time;
-} edvs_file_streaming_t;
 
 /** Start streaming events from a previously stored binary event file
  * Streaming can work in two modes: realtime and simulation.
@@ -501,13 +512,6 @@ int edvs_file_streaming_stop(edvs_file_streaming_t* s)
 
 #include <stdint.h>
 #include <string.h>
-
-typedef enum { EDVS_DEVICE_STREAM, EDVS_FILE_STREAM } stream_type;
-
-struct edvs_stream_t {
-	stream_type type;
-	uintptr_t handle;
-};
 
 edvs_stream_handle edvs_open(const char* uri)
 {
@@ -632,15 +636,37 @@ int edvs_eos(edvs_stream_handle s)
 
 ssize_t edvs_read(edvs_stream_handle s, edvs_event_t* events, size_t n)
 {
+	return edvs_read_ext(s, events, n, 0, 0);
+}
+
+ssize_t edvs_read_ext(edvs_stream_handle s, edvs_event_t* events, size_t n, edvs_special_t* special, size_t* ns)
+{
 	if(s->type == EDVS_DEVICE_STREAM) {
 		edvs_device_streaming_t* ds = (edvs_device_streaming_t*)s->handle;
-		return edvs_device_streaming_read(ds, events, n);
+		return edvs_device_streaming_read(ds, events, n, special, ns);
 	}
 	if(s->type == EDVS_FILE_STREAM) {
 		edvs_file_streaming_t* ds = (edvs_file_streaming_t*)s->handle;
+		if(ns != 0) {
+			*ns = 0;
+		}
 		return edvs_file_streaming_read(ds, events, n);
 	}
 	printf("edvs_read: unknown stream type\n");
+	return -1;
+}
+
+ssize_t edvs_write(edvs_stream_handle s, const char* cmd, size_t n)
+{
+	if(s->type == EDVS_DEVICE_STREAM) {
+		edvs_device_streaming_t* ds = (edvs_device_streaming_t*)s->handle;
+		return edvs_device_streaming_write(ds, cmd, n);
+	}
+	if(s->type == EDVS_FILE_STREAM) {
+		printf("edvs_write: ERROR can not write to file stream!\n");
+		return -1;
+	}
+	printf("edvs_write: unknown stream type\n");
 	return -1;
 }
 

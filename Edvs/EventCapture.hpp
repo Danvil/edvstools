@@ -25,25 +25,29 @@ namespace Edvs
 	struct EventCapture
 	{
 	public:
-		typedef boost::function<void(const std::vector<Event>&)> callback_t;
+		typedef boost::function<void(const std::vector<Event>&)> callback_event_t;
+		typedef boost::function<void(const std::vector<edvs_special_t>&)> callback_special_t;
 
 	private:
 		struct Impl
 		{
-			Impl(const EventStream& stream, callback_t callback) {
+			Impl(const EventStream& stream, callback_event_t callback_event, callback_special_t callback_special) {
 				is_running_ = true;
-				thread_ = boost::thread(&Impl::threadMain, this, stream, callback);
+				thread_ = boost::thread(&Impl::threadMain, this, stream, callback_event, callback_special);
 			}
 			~Impl() {
 				is_running_ = false;
 				thread_.join();
 			}
-			void threadMain(const EventStream& stream, callback_t callback) {
-				std::vector<edvs_event_t> buffer(1024);
+			void threadMain(const EventStream& stream, callback_event_t callback_event, callback_special_t callback_special) {
+				std::vector<edvs_event_t> buffer;
+				std::vector<edvs_special_t> buffer_special;
 				while(is_running_ && !stream.eos()) {
 					buffer.resize(1024);
-					stream.read(buffer);
-					callback(buffer);
+					buffer_special.resize(128);
+					stream.read(buffer, buffer_special);
+					callback_event(buffer);
+					callback_special(buffer_special);
 				}
 			}
 			bool is_running_;
@@ -53,12 +57,16 @@ namespace Edvs
 	public:
 		EventCapture() {}
 
-		EventCapture(const EventStream& stream, callback_t callback) {
-			start(stream, callback);
+		EventCapture(const EventStream& stream, callback_event_t callback_event) {
+			start(stream, callback_event, callback_special_t());
 		}
 
-		void start(const EventStream& stream, callback_t callback) {
-			impl_ = boost::make_shared<Impl>(stream, callback);
+		EventCapture(const EventStream& stream, callback_event_t callback_event, callback_special_t callback_special) {
+			start(stream, callback_event, callback_special);
+		}
+
+		void start(const EventStream& stream, callback_event_t callback_event, callback_special_t callback_special) {
+			impl_ = boost::make_shared<Impl>(stream, callback_event, callback_special);
 		}
 
 		bool is_running() const {
