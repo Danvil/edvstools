@@ -44,7 +44,7 @@ namespace Edvs
 				std::vector<edvs_special_t> buffer_special;
 				while(is_running_ && !stream.eos()) {
 					buffer.resize(1024);
-					buffer_special.resize(128);
+					buffer_special.resize(1024);
 					stream.read(buffer, buffer_special);
 					callback_event(buffer);
 					callback_special(buffer_special);

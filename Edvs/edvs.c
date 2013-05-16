@@ -4,6 +4,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+//#define VERBOSE_DEBUG_PRINTING
+
 // ----- ----- ----- ----- ----- ----- ----- ----- ----- //
 
 #include <sys/socket.h>
@@ -263,11 +265,13 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 	const unsigned int cNumBytesPerSpecial = 2 + cNumBytesTimestamp + 1 + 16;
 	const unsigned int cNumBytesAhead = (cNumBytesPerEvent > cNumBytesPerSpecial) ? cNumBytesPerEvent : cNumBytesPerSpecial;
 	// read bytes
-	unsigned char* buffer = s->buffer;
+	unsigned char* buffer_begin = s->buffer;
+	unsigned char* buffer = buffer_begin;
 	size_t num_bytes_events = n*cNumBytesPerEvent;
 	size_t num_bytes_buffer = s->length - s->offset;
 	size_t num_read = (num_bytes_buffer < num_bytes_events ? num_bytes_buffer : num_bytes_events);
 	ssize_t bytes_read = edvs_device_read(s->device, buffer + s->offset, num_read);
+	size_t num_special = 0;
 	if(bytes_read < 0) {
 		return bytes_read;
 	}
@@ -276,11 +280,20 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 	ssize_t i = 0; // index of current byte
 	edvs_event_t* event_it = events;
 	edvs_special_t* special_it = special;
+#ifdef VERBOSE_DEBUG_PRINTING
+	printf("START\n");
+#endif
 	while(i+cNumBytesAhead < bytes_read) {
+		// break if no more room for special
+		if(special != 0 && ns != 0 && num_special >= *ns) {
+			break;
+		}
 		// get to bytes
 		unsigned char a = buffer[i];
 		unsigned char b = buffer[i + 1];
-//		printf("e: %d %d\n", a, b);
+#ifdef VERBOSE_DEBUG_PRINTING
+		printf("e: %d %d\n", a, b);
+#endif
 		i += 2;
 		// check for and parse 0yyyyyyy pxxxxxxx
 		if(a & cHighBitMask) { // check that the high bit o first byte is 0
@@ -293,8 +306,18 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 		size_t special_data_len = 0;
 		if(a == 0 && b == 0) {
 			// get special data length
-			special_data_len = (buffer[i] & 0x0F) - cNumBytesTimestamp; // HACK assuming special data always sends timestamp!
+			special_data_len = (buffer[i] & 0x0F);
+			// HACK assuming special data always sends timestamp!
+			if(special_data_len >= cNumBytesTimestamp) {
+				special_data_len -= cNumBytesTimestamp;
+			}
+			else {
+				printf("ERROR parsing special data length!\n");
+			}
 			i ++;
+#ifdef VERBOSE_DEBUG_PRINTING
+			printf("s: len=%ld\n", special_data_len);
+#endif
 		}
 		// read timestamp
 		uint64_t timestamp;
@@ -308,7 +331,9 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 				  ((uint64_t)(buffer[i  ]) << 16)
 				| ((uint64_t)(buffer[i+1]) <<  8)
 				|  (uint64_t)(buffer[i+2]);
-//			printf("t: %d %d %d -> %ld\n", buffer[i], buffer[i+1], buffer[i+2], timestamp);
+#ifdef VERBOSE_DEBUG_PRINTING
+			printf("t: %d %d %d -> %ld\n", buffer[i], buffer[i+1], buffer[i+2], timestamp);
+#endif
 		}
 		else if(timestamp_mode == 3) {
 			timestamp =
@@ -341,14 +366,21 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 			special_it->t = s->current_time;
 			special_it->n = special_data_len;
 			// read special data
-//			printf("s: %ld -> ", special_it->n);
+#ifdef VERBOSE_DEBUG_PRINTING
+			printf("SPECIAL DATA:");
+#endif
 			for(size_t k=0; k<special_it->n; k++) {
 				special_it->data[k] = buffer[i+k];
-//				printf("%d ", special_it->data[k]);
+#ifdef VERBOSE_DEBUG_PRINTING
+				printf(" %d", special_it->data[k]);
+#endif
 			}
-//			printf("\n");
+#ifdef VERBOSE_DEBUG_PRINTING
+			printf("\n");
+#endif
 			i += special_it->n;
 			special_it++;
+			num_special++;
 		}
 		else {
 			// create event
