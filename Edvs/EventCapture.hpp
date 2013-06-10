@@ -46,8 +46,10 @@ namespace Edvs
 					buffer.resize(1024);
 					buffer_special.resize(1024);
 					stream.read(buffer, buffer_special);
-					callback_event(buffer);
-					callback_special(buffer_special);
+					if(callback_event)
+						callback_event(buffer);
+					if(callback_special)
+						callback_special(buffer_special);
 				}
 			}
 			bool is_running_;
