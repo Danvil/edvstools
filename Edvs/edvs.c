@@ -304,7 +304,7 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 		}
 		// check for special data
 		size_t special_data_len = 0;
-		if(a == 0 && b == 0) {
+		if(special != 0 && a == 0 && b == 0) {
 			// get special data length
 			special_data_len = (buffer[i] & 0x0F);
 			// HACK assuming special data always sends timestamp!
