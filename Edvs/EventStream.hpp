@@ -48,6 +48,21 @@ namespace Edvs
 			impl_.reset();
 		}
 
+		void read(std::vector<edvs_event_t>& v) const {
+			if(!is_open()) {
+				v.clear();
+			}
+			else {
+				ssize_t m = edvs_read_ext(impl_->h, v.data(), v.size(), 0, 0);
+				if(m >= 0) {
+					v.resize(m);
+				}
+				else {
+					v.clear();
+				}
+			}
+		}
+
 		void read(std::vector<edvs_event_t>& v, std::vector<edvs_special_t>& v_special) const {
 			if(!is_open()) {
 				v.clear();

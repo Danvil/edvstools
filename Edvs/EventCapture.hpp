@@ -31,15 +31,28 @@ namespace Edvs
 	private:
 		struct Impl
 		{
+			Impl(const EventStream& stream, callback_event_t callback_event) {
+				is_running_ = true;
+				thread_ = boost::thread(&Impl::threadMain, this, stream, callback_event);
+			}
 			Impl(const EventStream& stream, callback_event_t callback_event, callback_special_t callback_special) {
 				is_running_ = true;
-				thread_ = boost::thread(&Impl::threadMain, this, stream, callback_event, callback_special);
+				thread_ = boost::thread(&Impl::threadMainWithSpecial, this, stream, callback_event, callback_special);
 			}
 			~Impl() {
 				is_running_ = false;
 				thread_.join();
 			}
-			void threadMain(const EventStream& stream, callback_event_t callback_event, callback_special_t callback_special) {
+			void threadMain(const EventStream& stream, callback_event_t callback_event) {
+				std::vector<edvs_event_t> buffer;
+				while(is_running_ && !stream.eos()) {
+					buffer.resize(1024);
+					stream.read(buffer);
+					if(callback_event)
+						callback_event(buffer);
+				}
+			}
+			void threadMainWithSpecial(const EventStream& stream, callback_event_t callback_event, callback_special_t callback_special) {
 				std::vector<edvs_event_t> buffer;
 				std::vector<edvs_special_t> buffer_special;
 				while(is_running_ && !stream.eos()) {
@@ -65,6 +78,10 @@ namespace Edvs
 
 		EventCapture(const EventStream& stream, callback_event_t callback_event, callback_special_t callback_special) {
 			start(stream, callback_event, callback_special);
+		}
+
+		void start(const EventStream& stream, callback_event_t callback_event) {
+			impl_ = boost::make_shared<Impl>(stream, callback_event);
 		}
 
 		void start(const EventStream& stream, callback_event_t callback_event, callback_special_t callback_special) {
