@@ -46,6 +46,10 @@ int edvs_close(edvs_stream_handle h);
  */
 ssize_t edvs_read(edvs_stream_handle h, edvs_event_t* events, size_t n);
 
+ssize_t edvs_read_ext(edvs_stream_handle h, edvs_event_t* events, size_t n, edvs_special_t* special, size_t* ns);
+
+ssize_t edvs_write(edvs_stream_handle h, const char* cmd, size_t n);
+
 /** Reads events from a file */
 ssize_t edvs_file_read(FILE* fh, edvs_event_t* events, size_t n);
 
