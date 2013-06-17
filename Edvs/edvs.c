@@ -299,13 +299,13 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 		// get to bytes
 		unsigned char a = buffer[i];
 		unsigned char b = buffer[i + 1];
-		// check for and parse 0yyyyyyy pxxxxxxx
-		if(a & cHighBitMask) { // check that the high bit o first byte is 0
-			// the serial port missed a byte somewhere ...
-			// skip one byte to jump to the next event
-			i ++;
-			continue;
-		}
+		// // check for and parse 0yyyyyyy pxxxxxxx
+		// if(a & cHighBitMask) { // check that the high bit o first byte is 0
+		// 	// the serial port missed a byte somewhere ...
+		// 	// skip one byte to jump to the next event
+		// 	i ++;
+		// 	continue;
+		// }
 		// read timestamp
 		uint64_t timestamp;
 		if(timestamp_mode == 1) {
@@ -318,6 +318,7 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 				  ((uint64_t)(buffer[i+2]) << 16)
 				| ((uint64_t)(buffer[i+3]) <<  8)
 				|  (uint64_t)(buffer[i+4]);
+			printf("%d %d %d %d %d\n", buffer[i+0], buffer[i+1], buffer[i+2], buffer[i+3], buffer[i+4]);
 		}
 		else if(timestamp_mode == 3) {
 			timestamp =
