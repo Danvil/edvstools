@@ -73,7 +73,7 @@ namespace Edvs
 		EventCapture() {}
 
 		EventCapture(const EventStream& stream, callback_event_t callback_event) {
-			start(stream, callback_event, callback_special_t());
+			start(stream, callback_event);
 		}
 
 		EventCapture(const EventStream& stream, callback_event_t callback_event, callback_special_t callback_special) {
