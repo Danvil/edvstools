@@ -579,13 +579,25 @@ edvs_stream_handle edvs_open(const char* uri)
 	// check for 'baudrate' -> serial
 	char *pbaudrate = strstr(uri, "baudrate");
 	if(pbaudrate != NULL) {
-		// FIXME parse uri for port
-		char* port = "/dev/ttyUSB0";
-		// FIXME parse uri for baudrate
-		int baudrate = B4000000;
+		// parse uri for port
+		int port_len = pbaudrate - uri - 1;
+		char* port = (char*)malloc(port_len+1);
+		memcpy(port, uri, port_len);
+		port[port_len] = '\0';
+		// parse uri for baudrate
+		// FIXME find end of baudrate
+		int baudrate = atoi(pbaudrate+9);
+		int baudrate_tag;
+		switch(baudrate) {
+			case 2000000: baudrate_tag = B2000000; break;
+			case 4000000: baudrate_tag = B4000000; break;
+			default:
+				printf("edvs_open: invalid baudrate '%d'!", baudrate);
+				return 0;
+		}
 		// open device
-		printf("Opening serial port: port=%s, baudrate=%d\n", port, baudrate);
-		int dev = edvs_serial_open(port, baudrate);
+		printf("Opening serial port: port=%s, baudrate=%d\n", port, baudrate_tag);
+		int dev = edvs_serial_open(port, baudrate_tag);
 		if(dev < 0) {
 			printf("edvs_open: URI seems to point to a serial port, but connection failed\n");
 			return 0;
