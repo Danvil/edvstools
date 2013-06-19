@@ -295,13 +295,13 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 		printf("e: %d %d\n", a, b);
 #endif
 		i += 2;
-		// // check for and parse 0yyyyyyy pxxxxxxx
-		// if(a & cHighBitMask) { // check that the high bit o first byte is 0
-		// 	// the serial port missed a byte somewhere ...
-		// 	// skip one byte to jump to the next event
-		// 	i --;
-		// 	continue;
-		// }
+		// check for and parse 0yyyyyyy pxxxxxxx
+		if(a & cHighBitMask) { // check that the high bit o first byte is 0
+			// the serial port missed a byte somewhere ...
+			// skip one byte to jump to the next event
+			i --;
+			continue;
+		}
 		// check for special data
 		size_t special_data_len = 0;
 		if(special != 0 && a == 0 && b == 0) {
@@ -331,7 +331,7 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 				  ((uint64_t)(buffer[i  ]) << 16)
 				| ((uint64_t)(buffer[i+1]) <<  8)
 				|  (uint64_t)(buffer[i+2]);
-			printf("%d %d %d %d %d\n", a, b, buffer[i+0], buffer[i+1], buffer[i+2]);
+			// printf("%d %d %d %d %d\n", a, b, buffer[i+0], buffer[i+1], buffer[i+2]);
 #ifdef VERBOSE_DEBUG_PRINTING
 			printf("t: %d %d %d -> %ld\n", buffer[i], buffer[i+1], buffer[i+2], timestamp);
 #endif
