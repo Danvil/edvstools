@@ -24,3 +24,5 @@ add_subdirectory(EventViewer)
 #add_subdirectory(EventViewer)
 
 add_subdirectory(Examples)
+
+add_subdirectory(crossing-detector)
