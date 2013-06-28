@@ -41,105 +41,82 @@ struct CrossModel
 {
 	static constexpr int S = RetinaSize;
 	static constexpr float PI = 3.141592654f;
-	static constexpr int NA = 8;
+	static constexpr int NA = 16;
 
 	int r;
 
-	std::vector<Eigen::MatrixXf> t;
+	Eigen::MatrixXf ta, tw;
 	std::vector<Eigen::MatrixXf> data;
+	Eigen::MatrixXf data_w;
 
-	CrossModel(float sigma=20.0f) {
-		r = std::max<int>(3, std::ceil(2.0f * sigma)); // TODO 3.0f is only an approximation
+	CrossModel(float sigma=10.0f) {
+		r = std::max<int>(3, std::ceil(3.0f * sigma)); // TODO 3.0f is only an approximation
 		int a = 2*r+1;
 
-		QImage dbg(8*a, NA/8*a, QImage::Format_RGB32);
-
-		t = std::vector<Eigen::MatrixXf>(NA, Eigen::MatrixXf::Zero(a,a));
-		// for(int x=-r; x<=+r; x++) {
-		// 	for(int y=-r; y<=+r; y++) {
-		// 		float xf = static_cast<float>(x);
-		// 		float yf = static_cast<float>(y);
-		// 		if(x == 0 && y == 0) continue;
-		// 		float angle = static_cast<float>(NA) * (std::atan2(yf,xf) + PI) / PI;
-		// 		int ai = static_cast<int>(angle);
-		// 		float ap = angle - static_cast<float>(ai);
-		// 		const float d2 = xf*xf + yf*yf;
-		// 		const float f = std::exp(-0.5f*d2/(sigma*sigma)) / std::sqrt(d2);
-		// 		t[(ai+0)%NA](x+r,y+r) += f * (1.0f - ap);
-		// 		t[(ai+1)%NA](x+r,y+r) += f * ap;
-		// 	}
-		// }
-		// for(int ai=0; ai<NA; ai++) {
-		// 	t[ai](r,r) = 1.0f / static_cast<float>(NA);
-		// }
-		for(int ai=0; ai<NA; ai++) {
-			const float delta_angle = 1.0f / static_cast<float>(NA) * PI;
-			const float angle_base = static_cast<float>(ai) * delta_angle;
-			for(int x=-r; x<=+r; x++) {
-				for(int y=-r; y<=+r; y++) {					
-					float xf = static_cast<float>(x);
-					float yf = static_cast<float>(y);
-					if(x == 0 && y == 0) continue;
-					float angle = std::atan2(yf,xf);
-					float da = angle - angle_base;
-					while(da < 0) da += PI;
-					while(da > PI) da -= PI;
-					if(da > 0.5f*PI) da = PI - da;
-					const float d2 = xf*xf + yf*yf;
-					const float d = std::sqrt(d2);
-					const float num_px = d * 2.0f * PI;
-					const float px_da = 1.0f / num_px * 2.0f * PI;
-					float dap = std::max<float>(0.0f, 1.0f - da / std::max<float>(px_da, delta_angle));
-					const float f = std::exp(-0.5f*d2/(sigma*sigma));
-					t[ai](x+r,y+r) += f * dap;// / num_px;
+		ta = Eigen::MatrixXf::Zero(a,a);
+		tw = Eigen::MatrixXf::Zero(a,a);
+		float scl1 = 1.0f / std::sqrt(2.0f * PI * sigma);
+		float sigma2 = 0.25f * sigma;
+		float scl2 = 1.0f / (std::sqrt(5.0f) * std::sqrt(2.0f * PI * sigma2));
+		for(int x=-r; x<=+r; x++) {
+			for(int y=-r; y<=+r; y++) {					
+				float xf = static_cast<float>(x);
+				float yf = static_cast<float>(y);
+				float angle, weight;
+				if(x == 0 && y == 0) {
+					angle = 0.0f;
+					weight = 0.0f;
 				}
+				else {
+					angle = (std::atan2(yf,xf) + PI) / (2.0f*PI);
+					while(angle < 0.0f) angle += 1.0f;
+					while(angle >= 1.0f) angle -= 1.0f;
+					angle *= static_cast<float>(NA);
+					weight = scl1*std::exp(-0.5f*(xf*xf + yf*yf)/(sigma*sigma))
+						//- scl2*std::exp(-0.5f*(xf*xf + yf*yf)/(sigma2*sigma2))
+						;
+				}
+				ta(x+r,y+r) = angle;
+				tw(x+r,y+r) = std::max(0.0f, weight);
 			}
-			t[ai](r,r) = 1.0f / static_cast<float>(NA);
 		}
 
 		{
-			float scl = t[0].maxCoeff();
-			for(int ai=0; ai<NA; ai++) {
-				scl = std::max(scl, t[ai].maxCoeff());
-			}
-			for(int ai=0; ai<NA; ai++) {
-				int dx = ai % 8;
-				int dy = ai / 8;
-				for(int y=0; y<a; y++) {
-					for(int x=0; x<a; x++) {
-						int v = std::min(255, static_cast<int>(t[ai](x,y) / scl * 255.0f));
-						dbg.setPixel(dx*a + x, dy*a + y, qRgb(v,v,v));
-					}
-				}
-			}
-			QLabel* label1 = new QLabel();
-			label1->setPixmap(QPixmap::fromImage(dbg));
-			label1->show();
-		}
+			QImage dbg(a, a, QImage::Format_RGB32);
 
-		{
-			QImage dbg2(a, a, QImage::Format_RGB32);
-			Eigen::MatrixXf sum = t[0];
-			for(int ai=1; ai<NA; ai++) {
-				sum += t[ai];
-			}
-			float scl = sum.maxCoeff();
+			float scl = ta.maxCoeff();
 			for(int y=0; y<a; y++) {
 				for(int x=0; x<a; x++) {
-					int v = std::min(255, static_cast<int>(sum(x,y) / scl * 255.0f));
-					dbg2.setPixel(x, y, qRgb(v,v,v));
+					int v = std::min(255, static_cast<int>(ta(x,y) / scl * 255.0f));
+					dbg.setPixel(x, y, qRgb(v,v,v));
 				}
 			}
-			QLabel* label2 = new QLabel();
-			label2->setPixmap(QPixmap::fromImage(dbg2));
-			label2->show();
+			QLabel* label = new QLabel();
+			label->setPixmap(QPixmap::fromImage(dbg));
+			label->show();
+		}
+
+		{
+			QImage dbg(a, a, QImage::Format_RGB32);
+
+			float scl = tw.maxCoeff();
+			for(int y=0; y<a; y++) {
+				for(int x=0; x<a; x++) {
+					int v = std::min(255, static_cast<int>(tw(x,y) / scl * 255.0f));
+					dbg.setPixel(x, y, qRgb(v,v,v));
+				}
+			}
+			QLabel* label = new QLabel();
+			label->setPixmap(QPixmap::fromImage(dbg));
+			label->show();
 		}
 
 		data = std::vector<Eigen::MatrixXf>(NA, Eigen::MatrixXf::Zero(S,S));
+		data_w = Eigen::MatrixXf::Zero(S,S);
 	}
 
-	void add_event(int x, int y) {
-		// x = y = 64;
+	void add_event(int x, int y, int p) {
+		if(p == 0) p = -1;
 		int x1 = x - r;
 		int x2 = x + r;
 		int y1 = y - r;
@@ -150,36 +127,80 @@ struct CrossModel
 		int ay2 = std::min<int>(y2, S-1);
 		int sx = ax2-ax1+1;
 		int sy = ay2-ay1+1;
-		// FIXME add rotational dependency
-		for(int ai=0; ai<NA; ai++) {
-			data[ai].block(ax1, ay1, sx, sy)
-				+= t[ai].block(
-					(x1 < 0) ? (ax1 - x1) : 0,
-					(y1 < 0) ? (ay1 - y1) : 0,
-					sx, sy);
+		int bx = (x1 < 0) ? (ax1 - x1) : 0;
+		int by = (y1 < 0) ? (ay1 - y1) : 0;
+		Eigen::MatrixXf ma = ta.block(bx, by, sx, sy);
+		Eigen::MatrixXf mw = tw.block(bx, by, sx, sy);
+		for(int y=0; y<sy; ++y) {
+			for(int x=0; x<sx; ++x) {
+				float w = mw(x,y);
+				float wp = static_cast<float>(p) * w;
+				float a = ma(x,y);
+				int ai = static_cast<int>(a);
+				float ap = a - static_cast<float>(ai);
+				int gx = ax1 + x;
+				int gy = ay1 + y;
+				data[(ai + 0) % NA](gx, gy) += wp * (1.0f - ap);
+				data[(ai + 1) % NA](gx, gy) += wp * ap;
+				data_w(gx, gy) += w;
+			}
 		}
+		//data[0].block(ax1, ay1, sx, sy) += tw.block(bx, by, sx, sy);
 	}
+
+	static constexpr float FALLOFF = 0.90f;
 
 	void decay() {
 		for(int ai=0; ai<NA; ai++) {
-			data[ai] *= 0.83f;
+			data[ai] *= FALLOFF;
 		}
+		data_w *= FALLOFF;
 	}
 
 	Eigen::MatrixXf compute_propability() {
-		Eigen::MatrixXf sum = Eigen::MatrixXf::Zero(S, S);
-		std::vector<float> sums(data.size());
-		for(int ai=0; ai<NA; ai++) {
-			sums[ai] = data[ai].maxCoeff();
-		}
+
+		// float a = data_w.minCoeff();
+		// float b = data_w.maxCoeff();
+		// float r = std::max(std::abs(a), std::abs(b));
+		// return (data_w + Eigen::MatrixXf::Constant(data_w.rows(),data_w.cols(),r)) / (2.0f * r);
+
+
+		// std::vector<float> sums(data.size());
+		// for(int ai=0; ai<NA; ai++) {
+		// 	sums[ai] = data[ai].maxCoeff();
+		// }
+		Eigen::MatrixXf result = Eigen::MatrixXf::Zero(S, S);
 		for(int x=0; x<S; ++x) {
 			for(int y=0; y<S; ++y) {
-				for(int ai=0; ai<NA; ai++) {
-					sum(x,y) += data[ai](x,y)*data[(ai+NA/2)%NA](x,y)  / sums[ai]  / sums[(ai+NA/2)%NA];
+				float f_min = data[0](x,y);
+				float f_sum = 0.0f;
+				for(int ai=1; ai<NA; ai++) {
+					float f = data[ai](x,y);
+					f_min = std::min<float>(f_min, f);
+					f_sum += f;
 				}
+				float p_min = 1000000000.0f;
+				float p_max = 0.0f;
+				// float p_sum = 0.0f;
+				for(int ai=0; ai<NA/4; ai++) {
+					float a = std::max(0.0f, - data[ai](x,y) * data[ai+NA/2](x,y));
+					float b = std::max(0.0f, - data[ai+NA/4](x,y) * data[ai+(3*NA)/4](x,y));
+					//float p = std::pow((a1 - f_min) * (a2 - f_min) * (a3 - f_min) * (a4 - f_min), 0.25f);
+					float p = 256.0f * a * b;
+					p_min = std::min<float>(p_min, p);
+					p_max = std::max<float>(p_max, p);
+					// p_sum += p; 
+				}
+				// result(x,y) = (p_max == p_min) ? 0.0f : (p_max / (p_max - p_min));
+				// result(x,y) = (p_max == 0.0f) ? 0.0f : (p_max - p_min) / (p_max + p_min);
+				result(x,y) = p_max - p_min;
+				// result(x,y) = 4.0f * p_max / data_w(x,y);
 			}
 		}
-		return sum;
+		//std::cout << result.maxCoeff() << std::endl;
+		// return result;
+		return result / result.maxCoeff();
+		// return (result.array() * data_w.array()).matrix();
 	}
 
 };
@@ -284,7 +305,7 @@ void EdvsVisual::Update()
 	// write hough
 	{
 		for(const Edvs::Event& e : events) {
-			cross_model->add_event(e.x, e.y);
+			cross_model->add_event(e.x, e.y, e.parity);
 			// for(int ai=0; ai<HoughSizeAlpha; ai++) {
 			// 	float a = impl::map_i2a(ai);
 			// 	float d = static_cast<float>(e.x)*std::cos(a) + static_cast<float>(e.y)*std::sin(a);
@@ -332,17 +353,22 @@ void EdvsVisual::Display()
 	}
 	// vis cross
 	{
-		cross_model->decay();
 		Eigen::MatrixXf cc = cross_model->compute_propability();
+		cross_model->decay();
 		float* src = (float*)cc.data();
 		img_cross_ = QImage(cc.rows(), cc.cols(), QImage::Format_RGB32);
 		unsigned int* bits = (unsigned int*)img_cross_.bits();
-		const float cross_max = cc.maxCoeff();
-		std::cout << cross_max << std::endl;
+		unsigned int* bits_event = (unsigned int*)image_.bits();
 		const unsigned int N = img_cross_.height() * img_cross_.width();
 		for(int i=0; i<N; i++, ++bits, ++src) {
-			int v = std::min(255, static_cast<int>(*src / cross_max * 255.0f));
+			int v = std::min(255, static_cast<int>(*src * 255.0f));
 			*bits = qRgb(v,v,v);
+			// if(bits_event) {
+			// 	int v = qRed(*(bits_event++));
+			// 	if(std::abs(v - 128) > 92) {
+			// 		*bits = qRgb(255,0,0);
+			// 	}
+			// }
 		}
 	}
 	// rescale so that we see more :) and display
