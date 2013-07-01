@@ -14,11 +14,6 @@
 #include <unistd.h>
 #include <limits.h>
 
-/** Opens a network socket for reading events
- * @param address ip address of network socket
- * @param port port of network socket
- * @return socket handle on success or -1 on failure
- */
 int edvs_net_open(const char* address, int port)
 {
 	// open socket
@@ -47,15 +42,6 @@ int edvs_net_open(const char* address, int port)
 	return sockfd;
 }
 
-/** Reads data from a network socket
- * Reads at most n bytes and stores them in 'data'.
- * Does not block execution.
- * 'data' must have room for at least n bytes
- * @param sockfd socket handle
- * @param data valid buffer to store data
- * @param n maximum number of bytes to read 
- * @return the number of bytes actually read or -1 on failure
- */
 ssize_t edvs_net_read(int sockfd, unsigned char* data, size_t n)
 {
 	ssize_t m = recv(sockfd, data, n, 0);
@@ -66,7 +52,6 @@ ssize_t edvs_net_read(int sockfd, unsigned char* data, size_t n)
 	return m;
 }
 
-/** Writes data to a network socket */
 ssize_t edvs_net_write(int sockfd, const char* data, size_t n)
 {
 	ssize_t m = send(sockfd, data, n, 0);
@@ -76,10 +61,6 @@ ssize_t edvs_net_write(int sockfd, const char* data, size_t n)
 	return m;
 }
 
-/** Closes a network socket edvs connection
- * @param sockfd socket handle
- * @return 0 on success or -1 on failure
- */
 int edvs_net_close(int sockfd)
 {
 	int r = shutdown(sockfd, SHUT_RDWR);
@@ -101,9 +82,17 @@ int edvs_net_close(int sockfd)
 #include <stdio.h>
 #include <fcntl.h>
 
-/** Opens serial port connection to edvs sensor */
 int edvs_serial_open(const char* path, int baudrate)
 {
+	int baudrate_enum;
+	switch(baudrate) {
+		case 2000000: baudrate_enum = B2000000; break;
+		case 4000000: baudrate_enum = B4000000; break;
+		default:
+			printf("edvs_open: invalid baudrate '%d'!", baudrate);
+			return -1;
+	}
+
 	int port = open(path, O_RDWR /*| O_NOCTTY/ * | O_NDELAY*/);
 	if(port < 0) {
 		printf("edvs_serial_open: open error %d\n", port);
@@ -116,11 +105,11 @@ int edvs_serial_open(const char* path, int baudrate)
 		printf("edvs_serial_open: tcgetattr error\n");
 		return -1;
 	}
-	if(cfsetispeed(&settings, baudrate) != 0) {
+	if(cfsetispeed(&settings, baudrate_enum) != 0) {
 		printf("edvs_serial_open: cfsetispeed error\n");
 		return -1;
 	}
-	if(cfsetospeed(&settings, baudrate)) {
+	if(cfsetospeed(&settings, baudrate_enum)) {
 		printf("edvs_serial_open: cfsetospeed error\n");
 		return -1;
 	}
@@ -140,7 +129,6 @@ int edvs_serial_open(const char* path, int baudrate)
 	return port;
 }
 
-/** Reads data from the serial port */
 ssize_t edvs_serial_read(int port, unsigned char* data, size_t n)
 {
 	ssize_t m = read(port, data, n);
@@ -151,7 +139,6 @@ ssize_t edvs_serial_read(int port, unsigned char* data, size_t n)
 	return m;
 }
 
-/** Writes data to the serial port */
 ssize_t edvs_serial_write(int port, const char* data, size_t n)
 {
 	ssize_t m = write(port, data, n);
@@ -162,7 +149,6 @@ ssize_t edvs_serial_write(int port, const char* data, size_t n)
 	return m;
 }
 
-/** Closes a serial port edvs connection */
 int edvs_serial_close(int port)
 {
 	int r = close(port);
@@ -216,7 +202,6 @@ int edvs_device_close(edvs_device_t* dh)
 
 // ----- ----- ----- ----- ----- ----- ----- ----- ----- //
 
-/** Starts streaming events from an edvs device */
 edvs_device_streaming_t* edvs_device_streaming_start(edvs_device_t* dh)
 {
 	edvs_device_streaming_t *s = (edvs_device_streaming_t*)malloc(sizeof(edvs_device_streaming_t));
@@ -251,7 +236,6 @@ edvs_device_streaming_t* edvs_device_streaming_start(edvs_device_t* dh)
 	return s;
 }
 
-/** Reads events from an edvs device */
 ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* events, size_t n, edvs_special_t* special, size_t* ns)
 {
 	const int timestamp_mode = s->timestamp_mode;
@@ -419,7 +403,6 @@ int edvs_device_streaming_write(edvs_device_streaming_t* s, const char* cmd, siz
 	return 0;
 }
 
-/** Stops streaming from an edvs device */
 int edvs_device_streaming_stop(edvs_device_streaming_t* s)
 {
 	int r = edvs_device_streaming_write(s, "E-\n", 3);
@@ -450,17 +433,6 @@ ssize_t edvs_file_write(FILE* fh, const edvs_event_t* events, size_t n)
 
 #include <time.h>
 
-/** Start streaming events from a previously stored binary event file
- * Streaming can work in two modes: realtime and simulation.
- * Realtime (set dt=0): The system clock is used to simulate realtime
- * 			event streaming.
- * Simulation (set dt>0): Each call to 'edvs_file_streaming_read'
- * 			increases an internal clock by 'dt' and reads all
- * 			events which have occurred so far.
- * @param filename
- * @param dt
- * @return handle 
- */
 edvs_file_streaming_t* edvs_file_streaming_start(const char* filename, uint64_t dt, float ts)
 {
 	edvs_file_streaming_t *s = (edvs_file_streaming_t*)malloc(sizeof(edvs_file_streaming_t));
@@ -481,7 +453,6 @@ edvs_file_streaming_t* edvs_file_streaming_start(const char* filename, uint64_t 
 	return s;
 }
 
-/** Reads events from the event file stream */
 ssize_t edvs_file_streaming_read(edvs_file_streaming_t* s, edvs_event_t* events, size_t events_max)
 {
 	// get time
@@ -532,7 +503,6 @@ ssize_t edvs_file_streaming_read(edvs_file_streaming_t* s, edvs_event_t* events,
 	return num_total;
 }
 
-/** Stops streaming from an event file */
 int edvs_file_streaming_stop(edvs_file_streaming_t* s)
 {
 	fclose(s->fh);
@@ -587,17 +557,9 @@ edvs_stream_handle edvs_open(const char* uri)
 		// parse uri for baudrate
 		// FIXME find end of baudrate
 		int baudrate = atoi(pbaudrate+9);
-		int baudrate_tag;
-		switch(baudrate) {
-			case 2000000: baudrate_tag = B2000000; break;
-			case 4000000: baudrate_tag = B4000000; break;
-			default:
-				printf("edvs_open: invalid baudrate '%d'!", baudrate);
-				return 0;
-		}
 		// open device
-		printf("Opening serial port: port=%s, baudrate=%d\n", port, baudrate_tag);
-		int dev = edvs_serial_open(port, baudrate_tag);
+		printf("Opening serial port: port=%s, baudrate=%d\n", port, baudrate);
+		int dev = edvs_serial_open(port, baudrate);
 		if(dev < 0) {
 			printf("edvs_open: URI seems to point to a serial port, but connection failed\n");
 			return 0;
