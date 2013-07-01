@@ -41,7 +41,7 @@ struct CrossModel
 {
 	static constexpr int S = RetinaSize;
 	static constexpr float PI = 3.141592654f;
-	static constexpr int NA = 16;
+	static constexpr int NA = 32;
 
 	int r;
 
@@ -49,7 +49,7 @@ struct CrossModel
 	std::vector<Eigen::MatrixXf> data;
 	Eigen::MatrixXf data_w;
 
-	CrossModel(float sigma=10.0f) {
+	CrossModel(float sigma=15.0f) {
 		r = std::max<int>(3, std::ceil(3.0f * sigma)); // TODO 3.0f is only an approximation
 		int a = 2*r+1;
 
@@ -134,7 +134,8 @@ struct CrossModel
 		for(int y=0; y<sy; ++y) {
 			for(int x=0; x<sx; ++x) {
 				float w = mw(x,y);
-				float wp = static_cast<float>(p) * w;
+				// float wp = static_cast<float>(p) * w;
+				float wp = w;
 				float a = ma(x,y);
 				int ai = static_cast<int>(a);
 				float ap = a - static_cast<float>(ai);
@@ -153,52 +154,48 @@ struct CrossModel
 	void decay() {
 		for(int ai=0; ai<NA; ai++) {
 			data[ai] *= FALLOFF;
+			// float* src = data[ai].data();
+			// for(int i=0; i<S*S; i++) {
+			// 	if(*src <= 0.001f) *src = 0.0f;
+			// }
 		}
-		data_w *= FALLOFF;
+		{
+			// FIXME w may be wrong when data is clamped!
+			data_w *= FALLOFF;
+			// float* src = data_w.data();
+			// for(int i=0; i<S*S; i++) {
+			// 	if(*src <= 0.001f) *src = 0.0f;
+			// }
+		}
 	}
 
-	Eigen::MatrixXf compute_propability() {
-
-		// float a = data_w.minCoeff();
-		// float b = data_w.maxCoeff();
-		// float r = std::max(std::abs(a), std::abs(b));
-		// return (data_w + Eigen::MatrixXf::Constant(data_w.rows(),data_w.cols(),r)) / (2.0f * r);
-
-
-		// std::vector<float> sums(data.size());
-		// for(int ai=0; ai<NA; ai++) {
-		// 	sums[ai] = data[ai].maxCoeff();
-		// }
+	Eigen::MatrixXf compute_propability()
+	{
 		Eigen::MatrixXf result = Eigen::MatrixXf::Zero(S, S);
 		for(int x=0; x<S; ++x) {
 			for(int y=0; y<S; ++y) {
-				float f_min = data[0](x,y);
-				float f_sum = 0.0f;
-				for(int ai=1; ai<NA; ai++) {
-					float f = data[ai](x,y);
-					f_min = std::min<float>(f_min, f);
-					f_sum += f;
+				float v_sum = data_w(x,y);
+				if(v_sum <= 0.001f) {
+					result(x,y) = 0.0f;
 				}
-				float p_min = 1000000000.0f;
 				float p_max = 0.0f;
 				// float p_sum = 0.0f;
 				for(int ai=0; ai<NA/4; ai++) {
-					float a = std::max(0.0f, - data[ai](x,y) * data[ai+NA/2](x,y));
-					float b = std::max(0.0f, - data[ai+NA/4](x,y) * data[ai+(3*NA)/4](x,y));
-					//float p = std::pow((a1 - f_min) * (a2 - f_min) * (a3 - f_min) * (a4 - f_min), 0.25f);
-					float p = 256.0f * a * b;
-					p_min = std::min<float>(p_min, p);
+					const float v1 = data[ai](x,y)/v_sum; // 0 degree
+					const float v2 = data[ai+NA/4](x,y)/v_sum; // 90 degree
+					const float v3 = data[ai+NA/2](x,y)/v_sum; // 180 degree
+					const float v4 = data[ai+(3*NA)/4](x,y)/v_sum; // 270 degree
+					// float p = 256.0f * std::max(0.0f, -v1*v3) * std::max(0.0f, -v2*v4);
+					// float p = 16.0f * (std::max(0.0f, -v1*v3) + std::max(0.0f, -v2*v4));
+					float p = 256.0f * std::abs(v1*v2*v3*v4);
 					p_max = std::max<float>(p_max, p);
-					// p_sum += p; 
 				}
-				// result(x,y) = (p_max == p_min) ? 0.0f : (p_max / (p_max - p_min));
-				// result(x,y) = (p_max == 0.0f) ? 0.0f : (p_max - p_min) / (p_max + p_min);
-				result(x,y) = p_max - p_min;
-				// result(x,y) = 4.0f * p_max / data_w(x,y);
+				result(x,y) = v_sum * p_max;
 			}
 		}
 		//std::cout << result.maxCoeff() << std::endl;
 		// return result;
+		// return 20.0f * result;
 		return result / result.maxCoeff();
 		// return (result.array() * data_w.array()).matrix();
 	}
