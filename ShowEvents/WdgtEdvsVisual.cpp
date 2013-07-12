@@ -6,7 +6,7 @@
 
 const unsigned int RetinaSize = 128;
 const int cDecay = 24;
-const int cDisplaySize = 1024;
+const int cDisplaySize = 512;
 const int cUpdateInterval = 10;
 const int cDisplayInterval = 20;
 
@@ -93,7 +93,7 @@ void EdvsVisual::Update()
 	{
 		boost::interprocess::scoped_lock<boost::mutex> lock(events_mtx_);
 		for(const Edvs::Event& e : events_) {
-			image_.setPixel(e.x, e.y, e.parity ? cColorOn : cColorOff);
+			image_.setPixel(e.x, 127-e.y, e.parity ? cColorOn : cColorOff);
 		}
 		events_.clear();
 	}
