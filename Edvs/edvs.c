@@ -202,6 +202,16 @@ int edvs_device_close(edvs_device_t* dh)
 
 // ----- ----- ----- ----- ----- ----- ----- ----- ----- //
 
+uint64_t timestamp_limit(int mode)
+{
+	switch(mode) {
+		default: return 0; // no timestamps
+		case 1: return (1ull<<16); // 16 bit
+		case 2: return (1ull<<24); // 24 bit
+		case 3: return (1ull<<32); // 32 bit
+	}
+}
+
 edvs_device_streaming_t* edvs_device_streaming_start(edvs_device_t* dh)
 {
 	edvs_device_streaming_t *s = (edvs_device_streaming_t*)malloc(sizeof(edvs_device_streaming_t));
@@ -214,7 +224,7 @@ edvs_device_streaming_t* edvs_device_streaming_start(edvs_device_t* dh)
 	s->buffer = (unsigned char*)malloc(s->length);
 	s->offset = 0;
 	s->current_time = 0;
-	s->last_timestamp = 0;
+	s->last_timestamp = timestamp_limit(s->timestamp_mode);
 	if(s->timestamp_mode == 1) {
 		if(edvs_device_write(dh, "!E1\n", 4) != 4)
 			return 0;
@@ -238,13 +248,11 @@ edvs_device_streaming_t* edvs_device_streaming_start(edvs_device_t* dh)
 
 ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* events, size_t n, edvs_special_t* special, size_t* ns)
 {
-	const int timestamp_mode = s->timestamp_mode;
+	const int timestamp_mode = (s->timestamp_mode > 3) ? 0 : s->timestamp_mode;
 	const unsigned char cHighBitMask = 0x80; // 10000000
 	const unsigned char cLowerBitsMask = 0x7F; // 01111111
-	const unsigned int cNumBytesTimestamp = (
-		(1 <= timestamp_mode && timestamp_mode <= 3)
-		? (timestamp_mode + 1)
-		: 0);
+	const unsigned int cNumBytesTimestamp = (s->timestamp_mode == 0) ? 0 : (s->timestamp_mode + 1);
+	const uint64_t cTimestampLimit = timestamp_limit(timestamp_mode);
 	const unsigned int cNumBytesPerEvent = 2 + cNumBytesTimestamp;
 	const unsigned int cNumBytesPerSpecial = 2 + cNumBytesTimestamp + 1 + 16;
 	const unsigned int cNumBytesAhead = (cNumBytesPerEvent > cNumBytesPerSpecial) ? cNumBytesPerEvent : cNumBytesPerSpecial;
@@ -332,19 +340,24 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 		}
 		i += cNumBytesTimestamp;
 		// wrap timestamp correctly
-		if(s->current_time < 8) { // ignore timestamps of first 8 events
-			s->current_time ++;
-		}
-		else {
-			if(timestamp >= s->last_timestamp) {
-				s->current_time += (timestamp - s->last_timestamp);
+		if(timestamp_mode != 0) {
+			if(s->current_time < 8) { // ignore timestamps of first 8 events
+				s->current_time ++;
 			}
 			else {
-				s->current_time += 2 * timestamp;
+				if(s->last_timestamp != cTimestampLimit) {
+					if(timestamp >= s->last_timestamp) {
+						s->current_time += (timestamp - s->last_timestamp);
+					}
+					else {
+						// s->current_time += 2 * timestamp;
+						s->current_time += timestamp + (cTimestampLimit - s->last_timestamp);
+					}
+				}
 			}
+//			printf("old=%lu \tnew=%lu \tt=%lu\n", s->last_timestamp, timestamp, s->current_time);
+			s->last_timestamp = timestamp;
 		}
-//		printf("old=%lu \tnew=%lu \tt=%lu\n", s->last_timestamp, timestamp, s->current_time);
-		s->last_timestamp = timestamp;
 
 		if(special != 0 && ns != 0 && a == 0 && b == 0) {
 			// create special

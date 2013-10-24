@@ -7,7 +7,7 @@
 
 
 const unsigned int RetinaSize = 128;
-const int cDecay = 18;
+const int cDecay = 24;
 const int cDisplaySize = 512;
 const int cUpdateInterval = 10;
 const int cDisplayInterval = 20;
@@ -94,14 +94,14 @@ void EdvsVisual::OnEvent(const std::vector<Edvs::Event>& newevents, uint8_t id)
 	}
 
 	// print time information
-	// if(!newevents.empty()) {
-	// 	static uint64_t last_time = 0;
-	// 	uint64_t current_time = newevents.back().t;
-	// 	if(current_time >= last_time + 1000000) {
-	// 		std::cout << static_cast<float>(current_time)/1000000.0f << std::endl;
-	// 		last_time = current_time;
-	// 	}
-	// }
+	if(!newevents.empty()) {
+		static uint64_t last_time = 0;
+		uint64_t current_time = newevents.back().t;
+		if(current_time >= last_time + 1000000) {
+			std::cout << static_cast<float>(current_time)/1000000.0f << std::endl;
+			last_time = current_time;
+		}
+	}
 }
 
 int DecayComponent(int current, int target, int decay)
