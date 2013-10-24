@@ -21,6 +21,6 @@ add_subdirectory(ConvertEvents)
 add_subdirectory(EventVideoGenerator)
 add_subdirectory(EventViewer)
 
-#add_subdirectory(EventViewer)
+add_subdirectory(MultiEdvs)
 
 add_subdirectory(Examples)
