@@ -345,6 +345,8 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 				s->current_time ++;
 			}
 			else {
+				// FIXME possible errors for 16 bit timestamps if no event for more than 65 ms
+				// FIXME possible errors for 24/32 bit timestamps if timestamp is wrong
 				if(s->last_timestamp != cTimestampLimit) {
 					if(timestamp >= s->last_timestamp) {
 						s->current_time += (timestamp - s->last_timestamp);
