@@ -219,7 +219,7 @@ edvs_device_streaming_t* edvs_device_streaming_start(edvs_device_t* dh)
 		return 0;
 	}
 	s->device = dh;
-	s->timestamp_mode = 2;
+	s->timestamp_mode = 1;
 	s->length = 8192;
 	s->buffer = (unsigned char*)malloc(s->length);
 	s->offset = 0;
