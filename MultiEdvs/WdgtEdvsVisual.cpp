@@ -20,9 +20,9 @@ const int cDisplayInterval = 20;
 // black/white color scheme
 const QRgb cColorMid = qRgb(128, 128, 128);
 const QRgb cColorOn1 = qRgb(255, 0, 0);
-const QRgb cColorOff1 = qRgb(0, 255, 0);
+const QRgb cColorOff1 = cColorOn1;//qRgb(0, 255, 0);
 const QRgb cColorOn2 = qRgb(0, 128, 255);
-const QRgb cColorOff2 = qRgb(255, 128, 0);
+const QRgb cColorOff2 = cColorOn2;//qRgb(255, 128, 0);
 
 EdvsVisual::EdvsVisual(const Edvs::EventStream& dh1, const Edvs::EventStream& dh2, QWidget *parent)
     : QWidget(parent)
