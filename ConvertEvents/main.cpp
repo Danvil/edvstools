@@ -14,7 +14,7 @@ int main(int argc, char** argv)
 	std::string p_in;
 	std::string p_in_format = "natural";
 	std::string p_out;
-	std::string p_out_format = "natural";
+	std::string p_out_format = "tsv";
 
 	namespace po = boost::program_options;
 	// Declare the supported options.
@@ -22,9 +22,9 @@ int main(int argc, char** argv)
 	desc.add_options()
 		("help", "produce help message")
 		("in", po::value(&p_in), "filename of input event file (text format)")
-		("in-format", po::value(&p_in_format), "format of input file")
+		("in-format", po::value(&p_in_format)->default_value(p_in_format), "format of input file")
 		("out", po::value(&p_out), "filename of output event file (binary format)")
-		("out-format", po::value(&p_out_format), "format of output file")
+		("out-format", po::value(&p_out_format)->default_value(p_out_format), "format of output file")
 	;
 
 	po::variables_map vm;
