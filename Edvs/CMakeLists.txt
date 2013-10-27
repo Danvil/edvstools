@@ -5,8 +5,9 @@ ADD_LIBRARY(${PROJECT_NAME} SHARED
 	EventIO.cpp
 )
 
-set_source_files_properties(edvs.c PROPERTIES COMPILE_FLAGS "-std=c99 -Wall -D_BSD_SOURCE")
+set_source_files_properties(edvs.c PROPERTIES COMPILE_FLAGS "-std=c99 -Wall -D_GNU_SOURCE")
 
 TARGET_LINK_LIBRARIES(${PROJECT_NAME}
 	boost_thread
+	rt
 )

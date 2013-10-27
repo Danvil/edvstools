@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
 //#define VERBOSE_DEBUG_PRINTING
 
@@ -219,7 +220,8 @@ edvs_device_streaming_t* edvs_device_streaming_start(edvs_device_t* dh)
 		return 0;
 	}
 	s->device = dh;
-	s->timestamp_mode = 1;
+	s->timestamp_mode = 0; // 2
+	s->use_system_time = 1;// 0;
 	s->length = 8192;
 	s->buffer = (unsigned char*)malloc(s->length);
 	s->offset = 0;
@@ -246,8 +248,23 @@ edvs_device_streaming_t* edvs_device_streaming_start(edvs_device_t* dh)
 	return s;
 }
 
+uint64_t get_micro_time() {
+	struct timespec t;
+	clock_gettime(CLOCK_MONOTONIC, &t);
+	return 1000000ull*(uint64_t)(t.tv_sec) + (uint64_t)(t.tv_nsec)/1000ull;
+}
+
 ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* events, size_t n, edvs_special_t* special, size_t* ns)
 {
+	// realtime timer
+	uint64_t system_clock_time = 0;
+	if(s->use_system_time == 1) {
+		system_clock_time = get_micro_time();
+#ifdef VERBOSE_DEBUG_PRINTING
+		printf("Time: %ld\n", system_clock_time);
+#endif
+	}
+	// constants
 	const int timestamp_mode = (s->timestamp_mode > 3) ? 0 : s->timestamp_mode;
 	const unsigned char cHighBitMask = 0x80; // 10000000
 	const unsigned char cLowerBitsMask = 0x7F; // 01111111
@@ -325,7 +342,7 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 				|  (uint64_t)(buffer[i+2]);
 			// printf("%d %d %d %d %d\n", a, b, buffer[i+0], buffer[i+1], buffer[i+2]);
 #ifdef VERBOSE_DEBUG_PRINTING
-			printf("t: %d %d %d -> %ld\n", buffer[i], buffer[i+1], buffer[i+2], timestamp);
+				printf("t: %d %d %d -> %ld\n", buffer[i], buffer[i+1], buffer[i+2], timestamp);
 #endif
 		}
 		else if(timestamp_mode == 3) {
@@ -338,22 +355,36 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 		else {
 			timestamp = 0;
 		}
+		// advance byte count
 		i += cNumBytesTimestamp;
-		// wrap timestamp correctly
-		if(timestamp_mode != 0) {
-			if(s->current_time < 8) { // ignore timestamps of first 8 events
-				s->current_time ++;
+		// compute event time
+		if(s->use_system_time == 1) {
+			if(s->last_timestamp == cTimestampLimit) {
+			// 	// start event time at zero
+			// 	// FIXME this is problematic with multiple event streams
+			// 	//       as they will have different offsets
+			// 	s->last_timestamp = system_clock_time;
+				s->last_timestamp = 0; // use system clock time zero point
 			}
-			else {
-				// FIXME possible errors for 16 bit timestamps if no event for more than 65 ms
-				// FIXME possible errors for 24/32 bit timestamps if timestamp is wrong
-				if(s->last_timestamp != cTimestampLimit) {
-					if(timestamp >= s->last_timestamp) {
-						s->current_time += (timestamp - s->last_timestamp);
-					}
-					else {
-						// s->current_time += 2 * timestamp;
-						s->current_time += timestamp + (cTimestampLimit - s->last_timestamp);
+			s->current_time = system_clock_time;
+			s->last_timestamp = system_clock_time;
+		}
+		else {
+			if(timestamp_mode != 0) {
+				if(s->current_time < 8) { // ignore timestamps of first 8 events
+					s->current_time ++;
+				}
+				else {
+					if(s->last_timestamp != cTimestampLimit) {
+						// FIXME possible errors for 16 bit timestamps if no event for more than 65 ms
+						// FIXME possible errors for 24/32 bit timestamps if timestamp is wrong
+						if(timestamp >= s->last_timestamp) {
+							s->current_time += (timestamp - s->last_timestamp);
+						}
+						else {
+							// s->current_time += 2 * timestamp;
+							s->current_time += timestamp + (cTimestampLimit - s->last_timestamp);
+						}
 					}
 				}
 			}

@@ -103,6 +103,7 @@ int edvs_device_close(edvs_device_t* dh);
 typedef struct {
 	edvs_device_t* device;
 	int timestamp_mode;
+	int use_system_time;
 	unsigned char* buffer;
 	size_t length;
 	size_t offset;
