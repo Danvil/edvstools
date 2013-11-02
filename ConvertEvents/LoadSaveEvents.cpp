@@ -162,7 +162,7 @@ std::vector<Event> LoadEventsTable(const std::string& filename, char separator)
 		e.x = boost::lexical_cast<uint16_t>(tokens[1]);
 		e.y = boost::lexical_cast<uint16_t>(tokens[2]);
 		e.parity = boost::lexical_cast<uint8_t>(tokens[3]);
-		e.id = boost::lexical_cast<uint8_t>(tokens[4]);
+		e.id = boost::lexical_cast<unsigned int>(tokens[4]);
 		// std::istringstream iss(line);
 		// iss >> e.t >> e.x >> e.y >> e.parity >> e.id;
 		events.push_back(e);
