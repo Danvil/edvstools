@@ -20,6 +20,7 @@ add_subdirectory(CheckEvents)
 add_subdirectory(ConvertEvents)
 add_subdirectory(EventVideoGenerator)
 add_subdirectory(EventViewer)
+add_subdirectory(Terminal)
 
 add_subdirectory(MultiEdvs)
 
