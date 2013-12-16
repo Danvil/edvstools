@@ -34,9 +34,10 @@ int main(int argc, char** argv)
 
     std::cout << "Running..." << std::endl;
 
-	bool is_running = true;
+	bool* is_running = new bool;
+	*is_running = true;
 
-	std::thread rec(&read_loop, sp, &is_running);
+	std::thread rec(&read_loop, sp, is_running);
 
 	while(true) {
 		// user quit
@@ -47,11 +48,14 @@ int main(int argc, char** argv)
 		}
 		// send
 		if(str.length() > 0) {
+			str += "\n";
 			edvs_serial_write(sp, str.data(), str.length());
+			std::cout << "Sent '" << str << "'" << std::endl;
 		}
 	}
 
-	is_running = false;
+	*is_running = false;
+	rec.join();
 
     std::cout << "Quit." << std::endl;
 
