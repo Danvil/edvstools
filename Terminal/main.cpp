@@ -2,6 +2,7 @@
 #include <Edvs/edvs_impl.h>
 #include <thread>
 #include <iostream>
+#include <signal.h>
 
 void read_loop(int sp, bool* is_running) {
 	std::cout << "Read loop starting..." << std::endl;
@@ -9,23 +10,26 @@ void read_loop(int sp, bool* is_running) {
 	unsigned char buffer[N];
 	while(*is_running) {
 		ssize_t n = edvs_serial_read(sp, buffer, N);
-		std::cout << "Received " << n << " bytes:" << std::endl;
-		std::cout << "Raw: ";
-		for(int i=0; i<n; i++) {
-			std::cout << buffer[i];
+		if(n > 0 && is_running) {
+			// std::cout << "Received " << n << " bytes:" << std::endl;
+			// std::cout << "Raw: ";
+			for(int i=0; i<n; i++) {
+				std::cout << buffer[i];
+			}
+			std::cout << std::endl;
+			// std::cout << "Int: ";
+			// for(int i=0; i<n; i++) {
+			// 	std::cout << static_cast<int>(buffer[i]) << " ";
+			// }
+			// std::cout << std::endl;
 		}
-		std::cout << std::endl;
-		std::cout << "Int: ";
-		for(int i=0; i<n; i++) {
-			std::cout << static_cast<int>(buffer[i]);
-		}
-		std::cout << std::endl;
 	}
 	std::cout << "Read loop finished." << std::endl;
 }
 
 int main(int argc, char** argv)
 {
+
 	int sp = edvs_serial_open("/dev/ttyUSB0", 4000000);
 	if(sp == -1) {
 		std::cout << "ERROR edvs_serial_open" << std::endl;
@@ -54,15 +58,17 @@ int main(int argc, char** argv)
 		}
 	}
 
+	// sending '??' to get out of read...
 	*is_running = false;
+	edvs_serial_write(sp, "??\n", 3);
 	rec.join();
-
-    std::cout << "Quit." << std::endl;
 
 	if(edvs_serial_close(sp) != 0) {
 		std::cout << "ERROR edvs_serial_close" << std::endl;
 		return 0;
 	}
+
+    std::cout << "Quit." << std::endl;
 
 	return 1;
 }
