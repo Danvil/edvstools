@@ -9,5 +9,6 @@ set_source_files_properties(edvs.c PROPERTIES COMPILE_FLAGS "-std=c99 -Wall -D_G
 
 TARGET_LINK_LIBRARIES(${PROJECT_NAME}
 	boost_thread
+	boost_system
 	rt
 )
