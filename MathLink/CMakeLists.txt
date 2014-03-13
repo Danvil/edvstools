@@ -2,7 +2,7 @@ PROJECT(EdvsMathLink)
 
 set(MLDIR "/usr/local/Wolfram/Mathematica/9.0/SystemFiles/Links/MathLink/DeveloperKit/Linux-x86-64" CACHE PATH "Mathematica MathLink Kit Base Directory")
 
-ADD_DEFINITIONS(-m64)
+ADD_DEFINITIONS(-m64 -std=c99)
 
 INCLUDE_DIRECTORIES(
 	${edvstools_SOURCE_DIR}
@@ -21,7 +21,7 @@ ADD_CUSTOM_COMMAND(
 
 ADD_EXECUTABLE(${PROJECT_NAME}
 	${CMAKE_BINARY_DIR}/MathLink/EdvsMathLink_tm.c
-	main.cpp
+	main.c
 )
 
 TARGET_LINK_LIBRARIES(${PROJECT_NAME}

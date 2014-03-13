@@ -6,10 +6,10 @@ edvs_stream_handle s;
 const size_t num_max_events = 1024;
 edvs_event_t* events = NULL;
 
-extern "C" int addtwo(int i, int j);
-extern "C" int edvsOpen(const char* opt);
-extern "C" int edvsClose();
-extern "C" void edvsGet();
+// extern "C" int addtwo(int i, int j);
+// extern "C" int edvsOpen(const char* opt);
+// extern "C" int edvsClose();
+// extern "C" void edvsGet();
 
 int addtwo(int i, int j)
 {
@@ -20,7 +20,7 @@ int edvsOpen(const char* opt)
 {
 	events = (edvs_event_t*)malloc(num_max_events*sizeof(edvs_event_t));
 	s = edvs_open(opt);
-	return (s == nullptr) ? 0 : 1;
+	return (s == NULL) ? 0 : 1;
 }
 
 int edvsClose()
@@ -42,7 +42,7 @@ void edvsGet()
 		edvs_event_t* e = events + i;
 		p[0] = e->x;
 		p[1] = e->y;
-		p[2] = e->parity;
+		p[2] = (e->parity == 0) ? -1 : +1;
 		p[3] = e->t & 0x7FFFFFFF;
 		p[4] = (e->t >> 31) & 0x7FFFFFFF; // FIXME highest two bits are hopefully 0...
 	}
