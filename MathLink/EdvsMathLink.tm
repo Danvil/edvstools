@@ -21,24 +21,24 @@ int edvsOpen P((const char*));
 :End:
 :Evaluate: EdvsOpen::usage = "Opens the connection to an EDVS sensor. Example: opt='/dev/ttyUSB0?baudrate=4000000'"
 
-int edvsClose P(());
+int edvsClose P((int));
 
 :Begin:
 :Function:       edvsClose
-:Pattern:        EdvsClose[]
-:Arguments:      { }
-:ArgumentTypes:  { }
+:Pattern:        EdvsClose[id_Integer]
+:Arguments:      { id }
+:ArgumentTypes:  { Integer }
 :ReturnType:     Integer
 :End:
 :Evaluate: EdvsClose::usage = "Closes the connection to an EDVS sensor."
 
-void edvsGet P(());
+void edvsGet P((int));
 
 :Begin:
 :Function:       edvsGet
-:Pattern:        EdvsGet[]
-:Arguments:      { }
-:ArgumentTypes:  { }
+:Pattern:        EdvsGet[id_Integer]
+:Arguments:      { id }
+:ArgumentTypes:  { Integer }
 :ReturnType:     Manual
 :End:
 :Evaluate: EdvsGet::usage = "Reads events. Returns the number of events."

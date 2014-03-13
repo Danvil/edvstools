@@ -2,9 +2,16 @@
 #include "edvs.h"
 #include <stdlib.h>
 
-edvs_stream_handle s;
-const size_t num_max_events = 1024;
-edvs_event_t* events = NULL;
+#define NUM_MAX_EVENTS 1024
+#define NUM_LINKS 4
+
+typedef struct
+{
+	edvs_stream_handle s;
+	edvs_event_t* events;
+} handle_t;
+
+handle_t handles[NUM_LINKS];
 
 // extern "C" int addtwo(int i, int j);
 // extern "C" int edvsOpen(const char* opt);
@@ -18,28 +25,56 @@ int addtwo(int i, int j)
 
 int edvsOpen(const char* opt)
 {
-	events = (edvs_event_t*)malloc(num_max_events*sizeof(edvs_event_t));
-	s = edvs_open(opt);
-	return (s == NULL) ? 0 : 1;
+	for(int i=0; i<NUM_LINKS; i++) {
+		handle_t* h = &(handles[i]);
+		if(h->s == NULL) {
+			h->s = edvs_open(opt);
+			if(h->s == NULL) {
+				return 0;
+			}
+			return i + 1;
+		}
+	}
+	return 0;
 }
 
-int edvsClose()
+int edvsClose(int id)
 {
-	free(events);
-	int ret = edvs_close(s);
+	id --;
+	if(!(0 <= id && id < NUM_LINKS)) {
+		return 0;
+	}
+	handle_t* h = &(handles[id]);
+	if(h->s == NULL) {
+		return 0;
+	}
+	int ret = edvs_close(h->s);
+	h->s = NULL;
 	return (ret == 0) ? 1 : 0;
 }
 
-void edvsGet()
+// inline int clamp(uint16_t v)
+// {
+// 	return (v < 0) ? 0 : ((v >= 128) ? 127 : v);
+// }
+
+void edvsGet(int id)
 {
-	ssize_t m = edvs_read(s, events, num_max_events);
+	ssize_t m = 0;
+	handle_t* h = NULL;
+	id --;
+	if(0 <= id && id < NUM_LINKS) {
+		h = &(handles[id]);
+		m = edvs_read(h->s, h->events, NUM_MAX_EVENTS);
+	}
+	// send to Mathematica
 	long* dims = (long*)malloc(2*sizeof(long));
 	dims[0] = m;
 	dims[1] = 5;
 	int* dat = (int*)malloc(m*5*sizeof(int));
 	for(long i=0; i<m; i++) {
+		edvs_event_t* e = h->events + i;
 		int* p = dat + 5*i;
-		edvs_event_t* e = events + i;
 		p[0] = e->x;
 		p[1] = e->y;
 		p[2] = (e->parity == 0) ? -1 : +1;
@@ -53,6 +88,12 @@ void edvsGet()
 
 int main(int argc, char* argv[])
 {
+	for(int i=0; i<NUM_LINKS; i++) {
+		handle_t* h = &(handles[i]);
+		h->s = NULL;
+		h->events = (edvs_event_t*)malloc(NUM_MAX_EVENTS*sizeof(edvs_event_t));
+	}
+
 	return MLMain(argc, argv);
 }
 
