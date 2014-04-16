@@ -503,13 +503,12 @@ ssize_t edvs_file_streaming_read(edvs_file_streaming_t* s, edvs_event_t* events,
 {
 	// get time
 	if(s->dt == 0) {
-		uint64_t nt = (uint64_t)(s->timescale*(float)(((clock() - s->start_time)*1000000)/CLOCKS_PER_SEC));
-		s->current_event_time = s->start_event_time + nt;
+		uint64_t nt = ((clock() - s->start_time)*1000000)/CLOCKS_PER_SEC;
+		s->current_event_time = s->start_event_time + (uint64_t)(s->timescale*(float)(nt));
 	}
 	else {
 		s->current_event_time += s->dt;
 	}
-	printf("t=%ld\n",s->current_event_time);
 	size_t num_total = 0;
 	do {
 		// read more from stream
@@ -630,18 +629,35 @@ edvs_stream_handle edvs_open(const char* uri)
 		if(pquest != NULL) {
 			fn_len = pquest - uri;
 		}
-		char *fn = (char*)malloc(fn_len+1);
+		char *fn = malloc(fn_len+1);
 		memcpy(fn, uri, fn_len);
 		fn[fn_len] = '\0';
-		// parse dt
+		// parse arguments
 		uint64_t dt = 0;
-		if(pquest != NULL) {
-			// FIXME correct URI parsing!
-			dt = atoi(pquest+1+3);
-		}
-		// parse ts
-		// FIXME correct URI parsing!
 		float ts = 1.0f;
+		if(pquest != NULL) {
+			// create copy of token string
+			size_t len = strlen(pquest+1);
+			char* tmp = malloc(len+1);
+			memcpy(tmp, pquest+1, len+1);
+			// parse tokens by &
+			char *token = strtok(tmp, "&");
+			while(token != NULL) {
+				// find = in token and delete
+				char* val = strstr(token, "=");
+				val[0] = '\0';
+				val++;
+				// check which token we are parsing
+				if(strcmp(token,"dt")==0) {
+					dt = atoi(val);
+				}
+				if(strcmp(token,"ts")==0) {
+					ts = atof(val);
+				}
+				// next token
+				token = strtok(NULL, "&");
+			}
+		}
 		// open
 		printf("Opening event file '%s', using dt=%lu, ts=%f\n", fn, dt, ts);
 		edvs_file_streaming_t* ds = edvs_file_streaming_start(fn, dt, ts);
