@@ -492,9 +492,9 @@ edvs_file_streaming_t* edvs_file_streaming_start(const char* filename, uint64_t 
 	s->num_max = 1024;
 	s->unprocessed = (edvs_event_t*)malloc(s->num_max*sizeof(edvs_event_t));
 	s->num_curr = 0;
-	if(s->dt == 0) {
-		s->start_time = clock();
-	}
+	s->is_first = 1;
+	s->start_time = clock();
+	s->start_event_time = 0;
 	s->current_event_time = 0;
 	return s;
 }
@@ -504,15 +504,12 @@ ssize_t edvs_file_streaming_read(edvs_file_streaming_t* s, edvs_event_t* events,
 	// get time
 	if(s->dt == 0) {
 		uint64_t nt = (uint64_t)(s->timescale*(float)(((clock() - s->start_time)*1000000)/CLOCKS_PER_SEC));
-		if(nt == s->current_event_time) {
-			return 0;
-		}
-		s->current_event_time = nt;
+		s->current_event_time = s->start_event_time + nt;
 	}
 	else {
 		s->current_event_time += s->dt;
 	}
-	//printf("t=%ld\n",s->current_event_time);
+	printf("t=%ld\n",s->current_event_time);
 	size_t num_total = 0;
 	do {
 		// read more from stream
@@ -520,6 +517,11 @@ ssize_t edvs_file_streaming_read(edvs_file_streaming_t* s, edvs_event_t* events,
 			s->num_curr = edvs_file_read(s->fh, s->unprocessed, s->num_max);
 			if(s->num_curr == 0) s->is_eof = 1;
 			return 0;
+		}
+		if(s->is_first) {
+			s->start_event_time = s->unprocessed[0].t;
+			s->current_event_time = s->start_event_time;
+			s->is_first = 0;
 		}
 		// find first event with time greater equal to desires time
 		size_t n = 0;
@@ -639,7 +641,7 @@ edvs_stream_handle edvs_open(const char* uri)
 		}
 		// parse ts
 		// FIXME correct URI parsing!
-		float ts = 0.2f;
+		float ts = 1.0f;
 		// open
 		printf("Opening event file '%s', using dt=%lu, ts=%f\n", fn, dt, ts);
 		edvs_file_streaming_t* ds = edvs_file_streaming_start(fn, dt, ts);

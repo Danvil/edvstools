@@ -119,7 +119,9 @@ typedef struct {
 	edvs_event_t* unprocessed;
 	size_t num_max;
 	size_t num_curr;
+	int is_first;
 	clock_t start_time;
+	uint64_t start_event_time;
 	uint64_t current_event_time;
 } edvs_file_streaming_t;
 
