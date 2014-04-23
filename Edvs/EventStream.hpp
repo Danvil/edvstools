@@ -167,12 +167,14 @@ namespace Edvs
 				streams_.front().read(v);
 			}
 			else {
-				// capture events
-				std::vector<edvs_event_t> tmp(v.size() / streams_.size());
+				size_t num = v.size() / streams_.size();
+				std::vector<edvs_event_t> tmp(num);
 				v.clear();
 				uint8_t id = 0;
+				// capture events
 				for(const auto& s : streams_) {
-					//read events from stream
+					// read maximum number of events from stream
+					tmp.resize(num);
 					s.read(tmp);
 					// set correct ID
 					for(auto& e : tmp) {
