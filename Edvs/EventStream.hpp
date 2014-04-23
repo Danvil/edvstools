@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 namespace Edvs
 {
@@ -166,17 +167,26 @@ namespace Edvs
 				streams_.front().read(v);
 			}
 			else {
+				// capture events
 				std::vector<edvs_event_t> tmp(v.size() / streams_.size());
 				v.clear();
 				uint8_t id = 0;
 				for(const auto& s : streams_) {
+					//read events from stream
 					s.read(tmp);
+					// set correct ID
 					for(auto& e : tmp) {
 						e.id = id;
 					}
-					v.insert(v.begin(), tmp.begin(), tmp.end());
+					// add events
+					v.insert(v.end(), tmp.begin(), tmp.end());
 					id ++;
 				}
+				// sort events into correct order
+				std::sort(v.begin(), v.end(),
+					[](const edvs_event_t& a, const edvs_event_t& b) {
+						return a.t < b.t;
+					});
 			}
 		}
 
