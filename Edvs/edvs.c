@@ -220,7 +220,7 @@ edvs_device_streaming_t* edvs_device_streaming_start(edvs_device_t* dh)
 		return 0;
 	}
 	s->device = dh;
-	s->timestamp_mode = 0; // 2
+	s->timestamp_mode = 1; // 0
 	s->use_system_time = 1;// 0;
 	s->length = 8192;
 	s->buffer = (unsigned char*)malloc(s->length);
@@ -359,15 +359,30 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 		i += cNumBytesTimestamp;
 		// compute event time
 		if(s->use_system_time == 1) {
-			if(s->last_timestamp == cTimestampLimit) {
-			// 	// start event time at zero
-			// 	// FIXME this is problematic with multiple event streams
-			// 	//       as they will have different offsets
-			// 	s->last_timestamp = system_clock_time;
-				s->last_timestamp = 0; // use system clock time zero point
+			// compute time since last
+			// FIXME this does not assure that timestamps are increasing!!!
+			uint64_t dt;
+			if(timestamp < s->last_timestamp) {
+				// we have a wrap
+				dt = cTimestampLimit + timestamp - s->last_timestamp;
 			}
-			s->current_time = system_clock_time;
-			s->last_timestamp = system_clock_time;
+			else {
+				// we do not have a wrap
+				// OR long time no event => ignore
+				dt = s->last_timestamp - timestamp;
+			}
+			s->current_time = system_clock_time + dt;
+			s->last_timestamp = timestamp;
+			// // OLD
+			// if(s->last_timestamp == cTimestampLimit) {
+			// // 	// start event time at zero
+			// // 	// FIXME this is problematic with multiple event streams
+			// // 	//       as they will have different offsets
+			// // 	s->last_timestamp = system_clock_time;
+			// 	s->last_timestamp = 0; // use system clock time zero point
+			// }
+			// s->current_time = system_clock_time;
+			// s->last_timestamp = system_clock_time;
 		}
 		else {
 			if(timestamp_mode != 0) {
