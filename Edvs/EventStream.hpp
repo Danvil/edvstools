@@ -161,6 +161,7 @@ namespace Edvs
 
 		void read(std::vector<edvs_event_t>& v) const {
 			if(streams_.size() == 0) {
+				v.clear();
 				return;
 			}
 			else if(streams_.size() == 1) {
