@@ -43,6 +43,7 @@ EdvsVisual::EdvsVisual(const Edvs::EventStream& dh, QWidget *parent)
 
 EdvsVisual::~EdvsVisual()
 {
+	edvs_event_capture_.stop();
 }
 
 void EdvsVisual::OnEvent(const std::vector<Edvs::Event>& newevents)
