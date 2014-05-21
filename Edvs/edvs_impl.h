@@ -102,8 +102,8 @@ int edvs_device_close(edvs_device_t* dh);
 /** Device streaming parameters and state */
 typedef struct {
 	edvs_device_t* device;
-	int timestamp_mode;
-	int use_system_time;
+	int device_timestamp_mode;
+	int host_timestamp_mode;
 	unsigned char* buffer;
 	size_t length;
 	size_t offset;
@@ -126,8 +126,11 @@ typedef struct {
 } edvs_file_streaming_t;
 
 
-/** Starts streaming events from an edvs device */
-edvs_device_streaming_t* edvs_device_streaming_start(edvs_device_t* dh);
+/** Starts streaming events from an edvs device
+ * device_tsm: 0: none, 1: 16 bit, 2: 24 bit, 3: 32 bit
+ * host_tsm: 0: raw device, 1: unwrap, 2: with system time
+ */
+edvs_device_streaming_t* edvs_device_streaming_start(edvs_device_t* dh, int device_tsm, int host_tsm);
 
 /** Reads events from an edvs device */
 ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* events, size_t n, edvs_special_t* special, size_t* ns);
