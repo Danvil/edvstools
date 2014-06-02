@@ -44,11 +44,12 @@ unsigned int clip_retina_coord(float u)
 				static_cast<int>(std::floor(0.5f + u)))));
 }
 
-void create_video(const std::vector<Edvs::Event>& events, uint64_t dt, boost::format fmt_fn)
+void create_video(const std::vector<Edvs::Event>& events, uint64_t dt, boost::format fmt_fn, bool skip_empty)
 {
 	mat8 retina(RETINA_SIZE, RETINA_SIZE);
 	uint64_t tbase = events.front().t;
 	auto it = events.begin();
+	unsigned frame_save_id = 0;
 	for(unsigned int frame=0; it!=events.end(); frame++) {
 		std::fill(retina.data.begin(), retina.data.end(), 128);
 		unsigned int num = 0;
@@ -66,7 +67,10 @@ void create_video(const std::vector<Edvs::Event>& events, uint64_t dt, boost::fo
 			num++;
 		}
 		std::cout << "Frame " << frame << ": time=" << it->t << ", #events=" << num << std::endl;
-		save_png((fmt_fn % frame).str(), retina);
+		if(num > 0) {
+			save_png((fmt_fn % frame_save_id).str(), retina);
+			frame_save_id ++;
+		}
 		tbase += dt;
 	}
 }
@@ -77,6 +81,7 @@ int main(int argc, char** argv)
 	std::string p_dir = "/media/tmp/edvs_video";
 	uint64_t p_skip = 0;
 	int64_t p_dt = 1000000/25;
+	bool p_skip_empty = false;
 
 	namespace po = boost::program_options;
 	// Declare the supported options.
@@ -86,6 +91,7 @@ int main(int argc, char** argv)
 		("fn", po::value(&p_fn), "filename for input event file")
 		("dir", po::value(&p_dir), "filename for output directory")
 		("dt", po::value(&p_dt)->default_value(p_dt), "time per frame in microseconds")
+		("noempty", po::value(&p_skip_empty), "whether to skip empty frames")
 	;
 
 	po::variables_map vm;
@@ -110,7 +116,7 @@ int main(int argc, char** argv)
 
 	// create video
 	boost::format fmt_fn(p_dir + "/%05d.png");
-	create_video(events, p_dt, fmt_fn);
+	create_video(events, p_dt, fmt_fn, p_skip_empty);
 
 	// hit for ffmpeg
 	std::cout << "Run the following command to create the video:" << std::endl;
