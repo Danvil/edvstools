@@ -107,8 +107,11 @@ typedef struct {
 	unsigned char* buffer;
 	size_t length;
 	size_t offset;
-	uint64_t current_time;
-	uint64_t last_timestamp;
+//	uint64_t current_time;
+//	uint64_t last_timestamp;
+	uint64_t ts_last_device;
+	uint64_t ts_last_host;
+	uint64_t systime_offset;
 } edvs_device_streaming_t;
 
 typedef struct {

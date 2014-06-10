@@ -1,3 +1,6 @@
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 #include "edvs.h"
 #include "edvs_impl.h"
 #include <stdio.h>
@@ -213,6 +216,13 @@ uint64_t timestamp_limit(int mode)
 	}
 }
 
+uint64_t get_micro_time()
+{
+	struct timespec t;
+	clock_gettime(CLOCK_MONOTONIC, &t);
+	return 1000000ull*(uint64_t)(t.tv_sec) + (uint64_t)(t.tv_nsec)/1000ull;
+}
+
 edvs_device_streaming_t* edvs_device_streaming_start(edvs_device_t* dh, int device_tsm, int host_tsm)
 {
 	edvs_device_streaming_t *s = (edvs_device_streaming_t*)malloc(sizeof(edvs_device_streaming_t));
@@ -225,8 +235,11 @@ edvs_device_streaming_t* edvs_device_streaming_start(edvs_device_t* dh, int devi
 	s->length = 8192;
 	s->buffer = (unsigned char*)malloc(s->length);
 	s->offset = 0;
-	s->current_time = 0;
-	s->last_timestamp = timestamp_limit(s->device_timestamp_mode);
+//	s->current_time = 0;
+//	s->last_timestamp = timestamp_limit(s->device_timestamp_mode);
+	s->ts_last_device = timestamp_limit(s->device_timestamp_mode);
+	s->ts_last_host = s->ts_last_device;
+	s->systime_offset = get_micro_time();
 	if(s->device_timestamp_mode == 1) {
 		if(edvs_device_write(dh, "!E1\n", 4) != 4)
 			return 0;
@@ -248,10 +261,83 @@ edvs_device_streaming_t* edvs_device_streaming_start(edvs_device_t* dh, int devi
 	return s;
 }
 
-uint64_t get_micro_time() {
-	struct timespec t;
-	clock_gettime(CLOCK_MONOTONIC, &t);
-	return 1000000ull*(uint64_t)(t.tv_sec) + (uint64_t)(t.tv_nsec)/1000ull;
+uint64_t timestamp_dt(uint64_t t1, uint64_t t2, uint64_t wrap)
+{
+	if(t2 >= t1) {
+		// no wrap
+		return t2 - t1;
+	}
+	else {
+		// wrap (assume 1 wrap)
+		return (wrap + t2) - t1;
+	}
+}
+
+void compute_timestamps_incremental(edvs_event_t* begin, size_t n, uint64_t last_device, uint64_t last_host, uint64_t wrap)
+{
+	edvs_event_t* end = begin + n;
+	for(edvs_event_t* events=begin; events!=end; ++events) {
+		// current device time (wrapped)
+		uint64_t t = events->t;
+		// delta time since last
+		uint64_t dt = timestamp_dt(last_device, t, wrap);
+		// update timestamp
+		last_device = t;
+		// update timestamp
+		last_host += dt;
+		events->t = last_host;
+		printf("%"PRIu64"\t%"PRIu64"\n", t, events->t);
+	}
+}
+
+uint64_t sum_dt(edvs_event_t* begin, edvs_event_t* end, uint64_t last_device, uint64_t wrap)
+{
+	uint64_t dtsum_device = 0;
+	for(edvs_event_t* events=begin; events!=end; ++events) {
+		// current device time (wrapped)
+		uint64_t t = events->t;
+		// delta time since last
+		uint64_t dt = timestamp_dt(last_device, t, wrap);
+		// update timestamp
+		last_device = t;
+		// sum up
+		dtsum_device += dt;
+	}
+	return dtsum_device;
+}
+
+void compute_timestamps_systime(edvs_event_t* begin, size_t n, uint64_t last_device, uint64_t last_host, uint64_t wrap, uint64_t systime)
+{
+	edvs_event_t* end = begin + n;
+	// compute the total added delta time for all events (device time)
+	uint64_t dtsum_device = sum_dt(begin, end, last_device, wrap);
+	// delta time for all events (host time)
+	uint64_t dtsum_host = systime - last_host;
+//	printf("SUM DEVICE %"PRIu64"\tSUM HOST %"PRIu64"\n", dtsum_device, dtsum_host);
+	// problem: delta time for device might differ from delta time for host
+	// if dt_D < dt_H: this might have a natural cause, so we do not know if we need to do something
+	// if dt_D > dt_H: we have a problem as timestamps would not be ordered. to solve this we scale timestamps
+	uint64_t rem = 0;
+//	printf("%"PRIu64"\t%"PRIu64"\n", (end - 1)->t, systime);
+	uint64_t curr_host = systime;
+	uint64_t next_set_host = systime;
+	for(edvs_event_t* events=end-2; events>=begin; --events) { // iterate backwards (skip last)
+		// current device time (wrapped)
+		uint64_t t = events->t;
+		// current delta time
+		uint64_t dt_device = timestamp_dt(t, (events+1)->t, wrap);
+		// rescale
+		// rem_i-1 + dtD*sH = dtH*sD + rem_i, 0 <= rem_i < dtH
+		uint64_t s = rem + dt_device*dtsum_host;
+		rem = s % dtsum_device;
+		uint64_t dt_host = (s - rem) / dtsum_device;
+		curr_host -= dt_host;
+		(events+1)->t = next_set_host; // delay set to not corrupt device timesteps needed for computation
+		next_set_host = curr_host;
+//		printf("AAA %"PRIu64"\t%"PRIu64"\t%"PRIu64"\t%"PRIu64"\n", dt_device, dt_host, s, rem);
+//		printf("%"PRIu64"\t%"PRIu64"\n", t, curr_host);
+	}
+	begin->t = next_set_host; // set last here due to delayed set
 }
 
 ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* events, size_t n, edvs_special_t* special, size_t* ns)
@@ -358,61 +444,61 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 		// advance byte count
 		i += cNumBytesTimestamp;
 		// compute event time
-		if(s->host_timestamp_mode == 2) {
-			// compute time since last
-			// FIXME this does not assure that timestamps are increasing!!!
-			uint64_t dt;
-			if(timestamp < s->last_timestamp) {
-				// we have a wrap
-				dt = cTimestampLimit + timestamp - s->last_timestamp;
-			}
-			else {
-				// we do not have a wrap
-				// OR long time no event => ignore
-				dt = s->last_timestamp - timestamp;
-			}
-			s->current_time = system_clock_time + dt;
-			s->last_timestamp = timestamp;
-			// // OLD
-			// if(s->last_timestamp == cTimestampLimit) {
-			// // 	// start event time at zero
-			// // 	// FIXME this is problematic with multiple event streams
-			// // 	//       as they will have different offsets
-			// // 	s->last_timestamp = system_clock_time;
-			// 	s->last_timestamp = 0; // use system clock time zero point
-			// }
-			// s->current_time = system_clock_time;
-			// s->last_timestamp = system_clock_time;
-		}
-		else if(s->host_timestamp_mode == 1) {
-			if(timestamp_mode != 0) {
-				if(s->current_time < 8) { // ignore timestamps of first 8 events
-					s->current_time ++;
-				}
-				else {
-					if(s->last_timestamp != cTimestampLimit) {
-						// FIXME possible errors for 16 bit timestamps if no event for more than 65 ms
-						// FIXME possible errors for 24/32 bit timestamps if timestamp is wrong
-						if(timestamp >= s->last_timestamp) {
-							s->current_time += (timestamp - s->last_timestamp);
-						}
-						else {
-							// s->current_time += 2 * timestamp;
-							s->current_time += timestamp + (cTimestampLimit - s->last_timestamp);
-						}
-					}
-				}
-			}
-//			printf("old=%lu \tnew=%lu \tt=%lu\n", s->last_timestamp, timestamp, s->current_time);
-			s->last_timestamp = timestamp;
-		}
-		else {
-			s->current_time = timestamp;
-		}
+// 		if(s->host_timestamp_mode == 2) {
+// 			// compute time since last
+// 			// FIXME this does not assure that timestamps are increasing!!!
+// 			uint64_t dt;
+// 			if(timestamp < s->last_timestamp) {
+// 				// we have a wrap
+// 				dt = cTimestampLimit + timestamp - s->last_timestamp;
+// 			}
+// 			else {
+// 				// we do not have a wrap
+// 				// OR long time no event => ignore
+// 				dt = s->last_timestamp - timestamp;
+// 			}
+// 			s->current_time = system_clock_time + dt;
+// 			s->last_timestamp = timestamp;
+// 			// // OLD
+// 			// if(s->last_timestamp == cTimestampLimit) {
+// 			// // 	// start event time at zero
+// 			// // 	// FIXME this is problematic with multiple event streams
+// 			// // 	//       as they will have different offsets
+// 			// // 	s->last_timestamp = system_clock_time;
+// 			// 	s->last_timestamp = 0; // use system clock time zero point
+// 			// }
+// 			// s->current_time = system_clock_time;
+// 			// s->last_timestamp = system_clock_time;
+// 		}
+// 		else if(s->host_timestamp_mode == 1) {
+// 			if(timestamp_mode != 0) {
+// 				if(s->current_time < 8) { // ignore timestamps of first 8 events
+// 					s->current_time ++;
+// 				}
+// 				else {
+// 					if(s->last_timestamp != cTimestampLimit) {
+// 						// FIXME possible errors for 16 bit timestamps if no event for more than 65 ms
+// 						// FIXME possible errors for 24/32 bit timestamps if timestamp is wrong
+// 						if(timestamp >= s->last_timestamp) {
+// 							s->current_time += (timestamp - s->last_timestamp);
+// 						}
+// 						else {
+// 							// s->current_time += 2 * timestamp;
+// 							s->current_time += timestamp + (cTimestampLimit - s->last_timestamp);
+// 						}
+// 					}
+// 				}
+// 			}
+// //			printf("old=%lu \tnew=%lu \tt=%lu\n", s->last_timestamp, timestamp, s->current_time);
+// 			s->last_timestamp = timestamp;
+// 		}
+// 		else {
+// 			s->current_time = timestamp;
+// 		}
 
 		if(special != 0 && ns != 0 && a == 0 && b == 0) {
 			// create special
-			special_it->t = s->current_time;
+			special_it->t = timestamp; // FIXME s->current_time;
 			special_it->n = special_data_len;
 			// read special data
 #ifdef VERBOSE_DEBUG_PRINTING
@@ -433,7 +519,7 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 		}
 		else {
 			// create event
-			event_it->t = s->current_time;
+			event_it->t = timestamp;
 			event_it->x = (uint16_t)(b & cLowerBitsMask);
 			event_it->y = (uint16_t)(a & cLowerBitsMask);
 			event_it->parity = ((b & cHighBitMask) ? 1 : 0);
@@ -457,7 +543,28 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 			*ns = 0;
 		}
 	}
-	return event_it - events;
+	// number of events
+	ssize_t num_events = event_it - events;
+	// correct timestamps
+	if(num_events > 0) {
+		uint64_t last_device = s->ts_last_device;
+		uint64_t last_host = s->ts_last_host;
+		if(s->ts_last_host == cTimestampLimit) {
+			last_device = events->t;
+			last_host = 0;
+		}
+//		printf("LAST DEVICE %"PRIu64"\n", last_device);
+//		printf("LAST HOST %"PRIu64"\n", last_host);
+		s->ts_last_device = (events + num_events - 1)->t;
+		if(s->host_timestamp_mode == 1) {
+			compute_timestamps_incremental(events, num_events, last_device, last_host, cTimestampLimit);
+		}
+		if(s->host_timestamp_mode == 2) {
+			compute_timestamps_systime(events, num_events, last_device, last_host, cTimestampLimit, system_clock_time - s->systime_offset);
+		}
+		s->ts_last_host = (events + num_events - 1)->t;
+	}
+	return num_events;
 }
 
 int edvs_device_streaming_write(edvs_device_streaming_t* s, const char* cmd, size_t n)
