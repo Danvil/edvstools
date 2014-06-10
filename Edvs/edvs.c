@@ -286,7 +286,7 @@ void compute_timestamps_incremental(edvs_event_t* begin, size_t n, uint64_t last
 		// update timestamp
 		last_host += dt;
 		events->t = last_host;
-		printf("%"PRIu64"\t%"PRIu64"\n", t, events->t);
+//		printf("%"PRIu64"\t%"PRIu64"\n", t, events->t);
 	}
 }
 
