@@ -519,6 +519,9 @@ edvs_file_streaming_t* edvs_file_streaming_start(const char* filename, uint64_t 
 
 ssize_t edvs_file_streaming_read(edvs_file_streaming_t* s, edvs_event_t* events, size_t events_max)
 {
+	if(s->is_eof) {
+		return 0;
+	}
 	// get time
 	if(s->dt == 0) {
 		uint64_t nt = ((clock() - s->start_time)*1000000)/CLOCKS_PER_SEC;
@@ -532,8 +535,9 @@ ssize_t edvs_file_streaming_read(edvs_file_streaming_t* s, edvs_event_t* events,
 		// read more from stream
 		if(s->num_curr == 0) {
 			s->num_curr = edvs_file_read(s->fh, s->unprocessed, s->num_max);
-			if(s->num_curr == 0) s->is_eof = 1;
-			return 0;
+			if(s->num_curr == 0) {
+				s->is_eof = 1;
+			}
 		}
 		if(s->is_first) {
 			s->start_event_time = s->unprocessed[0].t;
@@ -563,7 +567,7 @@ ssize_t edvs_file_streaming_read(edvs_file_streaming_t* s, edvs_event_t* events,
 			(s->num_curr - n)*sizeof(edvs_event_t));
 		s->num_curr -= n;
 	}
-	while(s->num_curr == 0);
+	while(s->num_curr == 0 && s->is_eof != 1);
 	//printf("num_total=%zd\n",num_total);
 	return num_total;
 }
