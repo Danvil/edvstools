@@ -29,12 +29,20 @@ typedef struct edvs_stream_t* edvs_stream_handle;
  */
 edvs_stream_handle edvs_open(const char* uri);
 
+/** Runs the edvs event stream
+ * This starts event transmission
+ * @param return 0 on success and negative value on error
+ */
+int edvs_run(edvs_stream_handle h);
+
 /** Checks if the end of an edvs event stream has been reached
  * @param return 1 if end of stream has been reached
  *			0 if end of stream not reached
  *			negative value on error
  */
 int edvs_eos(edvs_stream_handle h);
+
+int edvs_get_master_slave_mode(edvs_stream_handle h);
 
 /** Closes an edvs event stream */
 int edvs_close(edvs_stream_handle h);

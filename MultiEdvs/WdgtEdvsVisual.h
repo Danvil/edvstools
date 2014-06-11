@@ -14,10 +14,10 @@ class EdvsVisual : public QWidget
     Q_OBJECT
 
 public:
-	EdvsVisual(const Edvs::EventStream& dh1, const Edvs::EventStream& dh2, QWidget *parent = 0);
+	EdvsVisual(const Edvs::EventStream& stream, QWidget *parent = 0);
 	~EdvsVisual();
 
-	void OnEvent(const std::vector<Edvs::Event>& events, uint8_t id);
+	void OnEvent(const std::vector<Edvs::Event>& events);
 
 public Q_SLOTS:
 	void OnButton();
@@ -26,10 +26,8 @@ public Q_SLOTS:
 	void Display();
 
 private:
-	Edvs::EventStream edvs_event_stream_1_;
-	Edvs::EventStream edvs_event_stream_2_;
-	Edvs::EventCapture edvs_event_capture_1_;
-	Edvs::EventCapture edvs_event_capture_2_;
+	Edvs::EventStream edvs_event_stream_;
+	Edvs::EventCapture edvs_event_capture_;
 	std::vector<Edvs::Event> events_;
 	boost::mutex events_mtx_;
 	QTimer timer_update_;

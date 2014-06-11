@@ -104,6 +104,7 @@ typedef struct {
 	edvs_device_t* device;
 	int device_timestamp_mode;
 	int host_timestamp_mode;
+	int master_slave_mode;
 	unsigned char* buffer;
 	size_t length;
 	size_t offset;
@@ -132,8 +133,9 @@ typedef struct {
 /** Starts streaming events from an edvs device
  * device_tsm: 0: none, 1: 16 bit, 2: 24 bit, 3: 32 bit
  * host_tsm: 0: raw device, 1: unwrap, 2: with system time
+ * master_slave_mode: 0: disabled, 1: master, 2: slave
  */
-edvs_device_streaming_t* edvs_device_streaming_start(edvs_device_t* dh, int device_tsm, int host_tsm);
+edvs_device_streaming_t* edvs_device_streaming_start(edvs_device_t* dh, int device_tsm, int host_tsm, int master_slave_mode);
 
 /** Reads events from an edvs device */
 ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* events, size_t n, edvs_special_t* special, size_t* ns);

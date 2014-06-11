@@ -35,36 +35,34 @@ namespace Edvs
 				is_running_ = true;
 				thread_ = boost::thread(&Impl::threadMain, this, stream, callback_event);
 			}
-			Impl(const EventStream& stream, callback_event_t callback_event, callback_special_t callback_special) {
-				is_running_ = true;
-				thread_ = boost::thread(&Impl::threadMainWithSpecial, this, stream, callback_event, callback_special);
-			}
+			// Impl(const EventStream& stream, callback_event_t callback_event, callback_special_t callback_special) {
+			// 	is_running_ = true;
+			// 	thread_ = boost::thread(&Impl::threadMainWithSpecial, this, stream, callback_event, callback_special);
+			// }
 			~Impl() {
 				is_running_ = false;
 				thread_.join();
 			}
 			void threadMain(const EventStream& stream, callback_event_t callback_event) {
-				std::vector<edvs_event_t> buffer;
 				while(is_running_ && !stream.eos()) {
-					buffer.resize(1024);
-					stream.read(buffer);
-					if(callback_event)
+					std::vector<edvs_event_t> buffer = stream.read();
+					if(callback_event && !buffer.empty())
 						callback_event(buffer);
 				}
 			}
-			void threadMainWithSpecial(const EventStream& stream, callback_event_t callback_event, callback_special_t callback_special) {
-				std::vector<edvs_event_t> buffer;
-				std::vector<edvs_special_t> buffer_special;
-				while(is_running_ && !stream.eos()) {
-					buffer.resize(1024);
-					buffer_special.resize(1024);
-					stream.read(buffer, buffer_special);
-					if(callback_event)
-						callback_event(buffer);
-					if(callback_special)
-						callback_special(buffer_special);
-				}
-			}
+			// void threadMainWithSpecial(const EventStream& stream, callback_event_t callback_event, callback_special_t callback_special) {
+			// 	std::vector<edvs_event_t> buffer;
+			// 	std::vector<edvs_special_t> buffer_special;
+			// 	while(is_running_ && !stream.eos()) {
+			// 		buffer.resize(1024);
+			// 		buffer_special.resize(1024);
+			// 		stream.read(buffer, buffer_special);
+			// 		if(callback_event && !buffer.empty())
+			// 			callback_event(buffer);
+			// 		if(callback_special && !buffer_special.empty())
+			// 			callback_special(buffer_special);
+			// 	}
+			// }
 			bool is_running_;
 			boost::thread thread_;
 		};
@@ -76,17 +74,17 @@ namespace Edvs
 			start(stream, callback_event);
 		}
 
-		EventCapture(const EventStream& stream, callback_event_t callback_event, callback_special_t callback_special) {
-			start(stream, callback_event, callback_special);
-		}
+		// EventCapture(const EventStream& stream, callback_event_t callback_event, callback_special_t callback_special) {
+		// 	start(stream, callback_event, callback_special);
+		// }
 
 		void start(const EventStream& stream, callback_event_t callback_event) {
 			impl_ = boost::make_shared<Impl>(stream, callback_event);
 		}
 
-		void start(const EventStream& stream, callback_event_t callback_event, callback_special_t callback_special) {
-			impl_ = boost::make_shared<Impl>(stream, callback_event, callback_special);
-		}
+		// void start(const EventStream& stream, callback_event_t callback_event, callback_special_t callback_special) {
+		// 	impl_ = boost::make_shared<Impl>(stream, callback_event, callback_special);
+		// }
 
 		bool is_running() const {
 			return impl_->is_running_;

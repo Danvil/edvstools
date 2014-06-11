@@ -31,11 +31,10 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	Edvs::EventStream stream1(p_uri1);
-	Edvs::EventStream stream2(p_uri2);
+	Edvs::EventStream stream(std::vector<std::string>{p_uri1, p_uri2});
 
 	QApplication a(argc, argv);
-	EdvsVisual w(stream1, stream2);
+	EdvsVisual w(stream);
 	w.show();
 
 	return a.exec();

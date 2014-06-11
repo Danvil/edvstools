@@ -24,7 +24,7 @@ const QRgb cColorOff1 = cColorOn1;//qRgb(0, 255, 0);
 const QRgb cColorOn2 = qRgb(0, 255, 255);
 const QRgb cColorOff2 = cColorOn2;//qRgb(255, 128, 0);
 
-EdvsVisual::EdvsVisual(const Edvs::EventStream& dh1, const Edvs::EventStream& dh2, QWidget *parent)
+EdvsVisual::EdvsVisual(const Edvs::EventStream& stream, QWidget *parent)
     : QWidget(parent)
 {
 	ui.setupUi(this);
@@ -43,16 +43,14 @@ EdvsVisual::EdvsVisual(const Edvs::EventStream& dh1, const Edvs::EventStream& dh
 	timer_display_.start();
 
 	// start capture
-	edvs_event_stream_1_ = dh1;
-	edvs_event_capture_1_ = Edvs::EventCapture(edvs_event_stream_1_,
-		boost::bind(&EdvsVisual::OnEvent, this, _1, 0));
-	edvs_event_stream_2_ = dh2;
-	edvs_event_capture_2_ = Edvs::EventCapture(edvs_event_stream_2_,
-		boost::bind(&EdvsVisual::OnEvent, this, _1, 1));
+	edvs_event_stream_ = stream;
+	edvs_event_capture_ = Edvs::EventCapture(edvs_event_stream_,
+		boost::bind(&EdvsVisual::OnEvent, this, _1));
 }
 
 EdvsVisual::~EdvsVisual()
 {
+	edvs_event_capture_.stop();
 }
 
 void EdvsVisual::OnButton()
@@ -76,31 +74,26 @@ void EdvsVisual::OnButton()
 	}
 }
 
-void EdvsVisual::OnEvent(const std::vector<Edvs::Event>& newevents, uint8_t id)
+void EdvsVisual::OnEvent(const std::vector<Edvs::Event>& newevents)
 {
-	std::vector<Edvs::Event> events_with_id = newevents;
-	if(id > 0) {
-		// change id
-		for(Edvs::Event& e : events_with_id) {
-			e.id = id;
-		}
-	}
-
 	// protect common vector with a mutex to avoid race conditions
 	boost::interprocess::scoped_lock<boost::mutex> lock(events_mtx_);
-	events_.insert(events_.end(), events_with_id.begin(), events_with_id.end());
+	events_.insert(events_.end(), newevents.begin(), newevents.end());
 	if(is_recording_) {
-		events_recorded_.insert(events_recorded_.end(), events_with_id.begin(), events_with_id.end());
+		events_recorded_.insert(events_recorded_.end(), newevents.begin(), newevents.end());
 	}
 
+	// std::cout << newevents.size() << std::endl;
+	// for(const auto& e : newevents) {
+	// 	std::cout << e.t << " " << static_cast<int>(e.id) << std::endl;
+	// }
+
 	// print time information
-	if(!newevents.empty()) {
-		static uint64_t last_time = 0;
-		uint64_t current_time = newevents.back().t;
-		if(current_time >= last_time + 1000000) {
-			std::cout << static_cast<float>(current_time)/1000000.0f << std::endl;
-			last_time = current_time;
-		}
+	static uint64_t last_time = 0;
+	uint64_t current_time = newevents.back().t;
+	if(current_time >= last_time + 1000000) {
+		std::cout << "Current time: " << static_cast<float>(current_time)/1000000.0f << std::endl;
+		last_time = current_time;
 	}
 }
 
