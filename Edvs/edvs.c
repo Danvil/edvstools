@@ -7,8 +7,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <errno.h>
 
-//#define VERBOSE_DEBUG_PRINTING
+#define EDVS_LOG_MESSAGE
+#define EDVS_LOG_WARNING
+#define EDVS_LOG_ULTRA
 
 // ----- ----- ----- ----- ----- ----- ----- ----- ----- //
 
@@ -102,7 +105,6 @@ int edvs_serial_open(const char* path, int baudrate)
 		printf("edvs_serial_open: open error %d\n", port);
 		return -1;
 	}
-//	fcntl(fd, F_SETFL, 0);
 	// set baud rates and other options
 	struct termios settings;
 	if(tcgetattr(port, &settings) != 0) {
@@ -241,6 +243,13 @@ edvs_device_streaming_t* edvs_device_streaming_open(edvs_device_t* dh, int devic
 	s->ts_last_device = timestamp_limit(s->device_timestamp_mode);
 	s->ts_last_host = s->ts_last_device;
 	s->systime_offset = 0;
+	// reset device
+	if(edvs_device_write(dh, "R\n", 2) != 2)
+		return 0;
+	struct timespec ts;
+	ts.tv_sec = 0;
+	ts.tv_nsec = 200000000L;
+	nanosleep(&ts,NULL);
 	// timestamp mode
 	if(s->device_timestamp_mode == 1) {
 		if(edvs_device_write(dh, "!E1\n", 4) != 4)
@@ -261,7 +270,7 @@ edvs_device_streaming_t* edvs_device_streaming_open(edvs_device_t* dh, int devic
 	// master slave
 	if(s->master_slave_mode == 1) {
 		// master
-#ifdef VERBOSE_DEBUG_PRINTING
+#ifdef EDVS_LOG_MESSAGE
 		printf("Arming master\n");
 #endif
 		if(edvs_device_write(dh, "!ETM0\n", 6) != 6)
@@ -269,7 +278,7 @@ edvs_device_streaming_t* edvs_device_streaming_open(edvs_device_t* dh, int devic
 	}
 	else if(s->master_slave_mode == 2) {
 		// slave
-#ifdef VERBOSE_DEBUG_PRINTING
+#ifdef EDVS_LOG_MESSAGE
 		printf("Arming slave\n");
 #endif
 		if(edvs_device_write(dh, "!ETS\n", 5) != 5)
@@ -278,25 +287,62 @@ edvs_device_streaming_t* edvs_device_streaming_open(edvs_device_t* dh, int devic
 	return s;
 }
 
+int flush_device(edvs_device_streaming_t* s)
+{
+	if(s->device->type == EDVS_SERIAL_DEVICE) {
+		int port = s->device->handle;
+		// set non-blocking
+		int flags = fcntl(port, F_GETFL, 0);
+		fcntl(port, F_SETFL, flags | O_NONBLOCK);
+		// read everything
+		unsigned char buff[1024];
+		while(edvs_device_read(s->device, buff, 1024) > 0);
+		// set blocking
+		fcntl(port, F_SETFL, flags);
+		return 0;
+	}
+	if(s->device->type == EDVS_NETWORK_DEVICE) {
+		// FIXME
+		printf("ERROR flush for network device not implemented\n");
+		return -1;
+	}
+	printf("edvs_run: unknown stream type\n");
+	return -1;
+}
+
 int edvs_device_streaming_run(edvs_device_streaming_t* s)
 {
 	s->systime_offset = get_micro_time();
+	if(s->master_slave_mode == 0) {
+#ifdef EDVS_LOG_MESSAGE
+		printf("Running as normal (no master/slave)\n");
+#endif
+	}
 	if(s->master_slave_mode == 1) {
-#ifdef VERBOSE_DEBUG_PRINTING
-		printf("Running master\n");
+#ifdef EDVS_LOG_MESSAGE
+		printf("Running as master\n");
 #endif
 		// master is giving the go command
 		if(edvs_device_write(s->device, "!ETM+\n", 6) != 6)
 			return -1;			
 	}
 	if(s->master_slave_mode == 2) {
-#ifdef VERBOSE_DEBUG_PRINTING
-		printf("Running slave\n");
+#ifdef EDVS_LOG_MESSAGE
+		printf("Running as slave\n");
 #endif
 	}
-	printf("Running device\n");
+	// reading everything which is in the pipe
+#ifdef EDVS_LOG_MESSAGE
+		printf("Flushing...\n");
+#endif
+	flush_device(s);
+	// starting event transmission
+#ifdef EDVS_LOG_MESSAGE
+		printf("Starting transmission\n");
+#endif
 	if(edvs_device_write(s->device, "E+\n", 3) != 3)
 		return -1;
+	// E+ is not mirrored so no need to get that out of the stream
 	return 0;
 }
 
@@ -307,6 +353,9 @@ uint64_t timestamp_dt(uint64_t t1, uint64_t t2, uint64_t wrap)
 		return t2 - t1;
 	}
 	else {
+#ifdef EDVS_LOG_WARNING
+		printf("WRAPPING old=%zd, new=%zd, wrap=%zd\n", t1, t2, wrap);
+#endif
 		// wrap (assume 1 wrap)
 		return (wrap + t2) - t1;
 	}
@@ -324,7 +373,7 @@ void compute_timestamps_incremental(edvs_event_t* begin, size_t n, uint64_t last
 		last_device = t;
 		// update timestamp
 		last_host += dt;
-		events->t = last_host;
+//		events->t = last_host;
 //		printf("%"PRIu64"\t%"PRIu64"\n", t, events->t);
 	}
 }
@@ -385,7 +434,7 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 	uint64_t system_clock_time = 0;
 	if(s->host_timestamp_mode == 2) {
 		system_clock_time = get_micro_time();
-#ifdef VERBOSE_DEBUG_PRINTING
+#ifdef EDVS_LOG_ULTRA
 		printf("Time: %ld\n", system_clock_time);
 #endif
 	}
@@ -405,7 +454,7 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 	size_t num_bytes_buffer = s->length - s->offset;
 	size_t num_read = (num_bytes_buffer < num_bytes_events ? num_bytes_buffer : num_bytes_events);
 	ssize_t bytes_read = edvs_device_read(s->device, buffer + s->offset, num_read);
-#ifdef VERBOSE_DEBUG_PRINTING
+#ifdef EDVS_LOG_ULTRA
 	printf("Read %zd bytes from device\n", bytes_read);
 	{
 		for(ssize_t i=0; i<bytes_read; i++) {
@@ -428,7 +477,7 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 	ssize_t i = 0; // index of current byte
 	edvs_event_t* event_it = events;
 	edvs_special_t* special_it = special;
-#ifdef VERBOSE_DEBUG_PRINTING
+#ifdef EDVS_LOG_ULTRA
 	printf("START\n");
 #endif
 	while(i+cNumBytesAhead < bytes_read) {
@@ -436,17 +485,18 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 		if(special != 0 && ns != 0 && num_special >= *ns) {
 			break;
 		}
-		// get to bytes
+		// get two bytes
 		unsigned char a = buffer[i];
 		unsigned char b = buffer[i + 1];
-#ifdef VERBOSE_DEBUG_PRINTING_2
+#ifdef EDVS_LOG_ULTRA
 		printf("e: %d %d\n", a, b);
 #endif
 		i += 2;
 		// check for and parse 1yyyyyyy pxxxxxxx
-		if((a & cHighBitMask) == 0) { // check that the high bit o first byte is 0
+		if((a & cHighBitMask) == 0) { // check that the high bit of first byte is 1
 			// the serial port missed a byte somewhere ...
 			// skip one byte to jump to the next event
+			printf("Error in high bit! Skipping a byte\n");
 			i --;
 			continue;
 		}
@@ -463,7 +513,7 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 				printf("ERROR parsing special data length!\n");
 			}
 			i ++;
-#ifdef VERBOSE_DEBUG_PRINTING_2
+#ifdef EDVS_LOG_ULTRA
 			printf("s: len=%ld\n", special_data_len);
 #endif
 		}
@@ -480,8 +530,8 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 				| ((uint64_t)(buffer[i+1]) <<  8)
 				|  (uint64_t)(buffer[i+2]);
 			// printf("%d %d %d %d %d\n", a, b, buffer[i+0], buffer[i+1], buffer[i+2]);
-#ifdef VERBOSE_DEBUG_PRINTING
-				printf("t: %d %d %d -> %ld\n", buffer[i], buffer[i+1], buffer[i+2], timestamp);
+#ifdef EDVS_LOG_ULTRA
+			printf("t: %d %d %d -> %ld\n", buffer[i], buffer[i+1], buffer[i+2], timestamp);
 #endif
 		}
 		else if(timestamp_mode == 3) {
@@ -554,16 +604,16 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 			special_it->t = timestamp; // FIXME s->current_time;
 			special_it->n = special_data_len;
 			// read special data
-#ifdef VERBOSE_DEBUG_PRINTING
+#ifdef EDVS_LOG_ULTRA
 			printf("SPECIAL DATA:");
 #endif
 			for(size_t k=0; k<special_it->n; k++) {
 				special_it->data[k] = buffer[i+k];
-#ifdef VERBOSE_DEBUG_PRINTING
+#ifdef EDVS_LOG_ULTRA
 				printf(" %d", special_it->data[k]);
 #endif
 			}
-#ifdef VERBOSE_DEBUG_PRINTING
+#ifdef EDVS_LOG_ULTRA
 			printf("\n");
 #endif
 			i += special_it->n;
@@ -598,7 +648,7 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 	}
 	// number of events
 	ssize_t num_events = event_it - events;
-#ifdef VERBOSE_DEBUG_PRINTING
+#ifdef EDVS_LOG_ULTRA
 	printf("Parsed %zd events\n", num_events);
 #endif
 	// correct timestamps
