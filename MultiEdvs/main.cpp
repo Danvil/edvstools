@@ -6,8 +6,8 @@
 
 int main(int argc, char *argv[])
 {
-	std::string p_uri1 = "/dev/ttyUSB0?baudrate=4000000";
-	std::string p_uri2 = "/dev/ttyUSB2?baudrate=4000000";
+	std::string p_uri1 = "";
+	std::string p_uri2 = "";
 
 	namespace po = boost::program_options;
 	// Declare the supported options.
@@ -31,7 +31,10 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	Edvs::EventStream stream(std::vector<std::string>{p_uri1, p_uri2});
+	std::vector<std::string> uris;
+	if(!p_uri1.empty()) uris.push_back(p_uri1);
+	if(!p_uri2.empty()) uris.push_back(p_uri2);
+	Edvs::EventStream stream(uris);
 
 	QApplication a(argc, argv);
 	EdvsVisual w(stream);
