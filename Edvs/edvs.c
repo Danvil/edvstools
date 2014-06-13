@@ -11,7 +11,7 @@
 
 #define EDVS_LOG_MESSAGE
 #define EDVS_LOG_WARNING
-#define EDVS_LOG_ULTRA
+//#define EDVS_LOG_ULTRA
 
 // ----- ----- ----- ----- ----- ----- ----- ----- ----- //
 
@@ -225,6 +225,14 @@ uint64_t get_micro_time()
 	return 1000000ull*(uint64_t)(t.tv_sec) + (uint64_t)(t.tv_nsec)/1000ull;
 }
 
+void sleep_ms(unsigned long long milli_secs)
+{
+	struct timespec ts;
+	ts.tv_sec = 0;
+	ts.tv_nsec = milli_secs * 1000000L;
+	nanosleep(&ts, NULL);
+}
+
 edvs_device_streaming_t* edvs_device_streaming_open(edvs_device_t* dh, int device_tsm, int host_tsm, int master_slave_mode)
 {
 	edvs_device_streaming_t *s = (edvs_device_streaming_t*)malloc(sizeof(edvs_device_streaming_t));
@@ -246,10 +254,7 @@ edvs_device_streaming_t* edvs_device_streaming_open(edvs_device_t* dh, int devic
 	// reset device
 	if(edvs_device_write(dh, "R\n", 2) != 2)
 		return 0;
-	struct timespec ts;
-	ts.tv_sec = 0;
-	ts.tv_nsec = 200000000L;
-	nanosleep(&ts,NULL);
+	sleep_ms(200);
 	// timestamp mode
 	if(s->device_timestamp_mode == 1) {
 		if(edvs_device_write(dh, "!E1\n", 4) != 4)
@@ -310,6 +315,35 @@ int flush_device(edvs_device_streaming_t* s)
 	return -1;
 }
 
+// str must be null terminated
+int wait_for(edvs_device_streaming_t* s, const unsigned char* str)
+{
+	if(s->device->type == EDVS_SERIAL_DEVICE) {
+		size_t pos = 0;
+		while(str[pos] != 0) {
+			unsigned char c;
+			ssize_t n = edvs_device_read(s->device, &c, 1);
+			if(n != 1) {
+				return -1;
+			}
+			if(c == str[pos]) {
+				pos ++;
+			}
+			else {
+				pos = 0;
+			}
+		}
+		return 0;
+	}
+	if(s->device->type == EDVS_NETWORK_DEVICE) {
+		// FIXME
+		printf("ERROR flush for network device not implemented\n");
+		return -1;
+	}
+	printf("edvs_run: unknown stream type\n");
+	return -1;
+}
+
 int edvs_device_streaming_run(edvs_device_streaming_t* s)
 {
 	s->systime_offset = get_micro_time();
@@ -331,18 +365,20 @@ int edvs_device_streaming_run(edvs_device_streaming_t* s)
 		printf("Running as slave\n");
 #endif
 	}
-	// reading everything which is in the pipe
-#ifdef EDVS_LOG_MESSAGE
-		printf("Flushing...\n");
-#endif
-	flush_device(s);
+// 	// reading everything which is in the pipe
+// #ifdef EDVS_LOG_MESSAGE
+// 		printf("Flushing...\n");
+// #endif
+// 	flush_device(s);
 	// starting event transmission
 #ifdef EDVS_LOG_MESSAGE
 		printf("Starting transmission\n");
 #endif
 	if(edvs_device_write(s->device, "E+\n", 3) != 3)
 		return -1;
-	// E+ is not mirrored so no need to get that out of the stream
+	// wait until we get E+\n back
+	sleep_ms(10);
+	wait_for(s, "E+\n");
 	return 0;
 }
 
@@ -353,9 +389,6 @@ uint64_t timestamp_dt(uint64_t t1, uint64_t t2, uint64_t wrap)
 		return t2 - t1;
 	}
 	else {
-#ifdef EDVS_LOG_WARNING
-		printf("WRAPPING old=%zd, new=%zd, wrap=%zd\n", t1, t2, wrap);
-#endif
 		// wrap (assume 1 wrap)
 		return (wrap + t2) - t1;
 	}
@@ -367,13 +400,38 @@ void compute_timestamps_incremental(edvs_event_t* begin, size_t n, uint64_t last
 	for(edvs_event_t* events=begin; events!=end; ++events) {
 		// current device time (wrapped)
 		uint64_t t = events->t;
+//		printf("%zd %p\n", t, events);
 		// delta time since last
 		uint64_t dt = timestamp_dt(last_device, t, wrap);
+
+// 		// HACK
+// 		// sometimes we get wrong timestamps
+// 		// so we only do the wrapping if the dt is not too big
+// 		if(dt > 32000) { // 32 milliseconds (dangerous if less than 30 events/second)
+// 			// ignore wrapping
+// #ifdef EDVS_LOG_WARNING
+// 			printf("IGNORED WRAPPING old=%zd, new=%zd, wrap=%zd\n", last_device, t, wrap);
+// #endif
+// 			// do not update last_device or last_host
+// 		}
+// 		else {
+// 			// do wrapping
+// #ifdef EDVS_LOG_WARNING
+// 			if(t < last_device) {
+// 				printf("WRAPPING old=%zd, new=%zd, wrap=%zd\n", last_device, t, wrap);
+// 			}
+// #endif
+// 			// update timestamp
+// 			last_device = t;
+// 			// update timestamp
+// 			last_host += dt;
+// 		}
+
 		// update timestamp
 		last_device = t;
 		// update timestamp
 		last_host += dt;
-//		events->t = last_host;
+		events->t = last_host;
 //		printf("%"PRIu64"\t%"PRIu64"\n", t, events->t);
 	}
 }
