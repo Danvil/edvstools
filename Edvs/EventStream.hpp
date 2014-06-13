@@ -126,30 +126,6 @@ namespace Edvs
 				}
 			}
 
-			// void read(std::vector<edvs_event_t>& v, std::vector<edvs_special_t>& v_special) const {
-			// 	if(!is_open()) {
-			// 		v.clear();
-			// 		v_special.clear();
-			// 	}
-			// 	else {
-			// 		size_t v_special_n = v_special.size();
-			// 		ssize_t m = edvs_read_ext(impl_->h, v.data(), v.size(), v_special.data(), &v_special_n);
-			// 		if(m >= 0) {
-			// 			v.resize(m);
-			// 		}
-			// 		else {
-			// 			v.clear();
-			// 		}
-			// 		// special
-			// 		if(v_special_n >= 0) {
-			// 			v_special.resize(v_special_n);
-			// 		}
-			// 		else {
-			// 			v_special.clear();
-			// 		}
-			// 	}
-			// }
-
 			void write(const std::string& cmd) const {
 				std::string cmdn = cmd;
 				cmdn += '\n';
@@ -255,18 +231,6 @@ namespace Edvs
 				});
 			return v;
 		}
-
-		// void read(std::vector<edvs_event_t>& v, std::vector<edvs_special_t>& v_special) const {
-		// 	if(streams_.size() == 0) {
-		// 		return;
-		// 	}
-		// 	else if(streams_.size() == 1) {
-		// 		streams_.front().read(v, v_special);
-		// 	}
-		// 	else {
-		// 		// NOT IMPLEMENTED
-		// 	}
-		// }
 
 		void write(const std::string& cmd) const {
 			for(const auto& s : streams_) {
