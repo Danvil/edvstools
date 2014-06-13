@@ -44,12 +44,9 @@ namespace Edvs
 
 			std::vector<edvs_event_t> pop_events()
 			{
-				std::vector<edvs_event_t> tmp;
-				{
-					boost::interprocess::scoped_lock<boost::mutex> lock(mtx_);
-					tmp = std::move(events_);
-					events_ = {};
-				}
+				boost::interprocess::scoped_lock<boost::mutex> lock(mtx_);
+				std::vector<edvs_event_t> tmp = std::move(events_); // TODO is this move correct?
+				events_ = {};
 				return tmp;
 			}
 			
@@ -142,8 +139,8 @@ namespace Edvs
 			}
 
 		private:
-			mutable std::shared_ptr<impl::Handle> impl_;
-			mutable uint64_t last_time_;
+			std::shared_ptr<impl::Handle> impl_;
+			uint64_t last_time_;
 		};
 	}
 
@@ -219,31 +216,43 @@ namespace Edvs
 
 		std::vector<edvs_event_t> read()
 		{
-			uint8_t id = 0;
-			// capture events
+			// compute the "common time"
+			// this is the time up to which all streams have delivered events
 			uint64_t common_time = std::numeric_limits<uint64_t>::max();
+			// id of stream is its position in the list of streams 
+			uint8_t id = 0;
+			// iterate over all streams and get events
+			bool all_empty = true;
 			for(auto& s : streams_) {
 				// read maximum number of events from stream
 				auto tmp = s.read();
 				// update common time
-				common_time = std::min(common_time, s.last_timestamp());
+				uint64_t lastts = s.last_timestamp();
+				common_time = std::min(common_time, lastts);
+				// check if streams return nothing
+				all_empty = all_empty && tmp.empty();
 				// set correct ID
 				for(auto& e : tmp) {
 					e.id = id;
+//					std::cout << (int)(e.id) << " " << e.t << std::endl;
 				}
-				// add events
+				// add events to our buffer
 				events_.insert(events_.end(), tmp.begin(), tmp.end());
-				// std::cout << (int)id << " " << v.size() << std::endl;
+				// next stream gets next id
 				id ++;
 			}
-			// sort events into correct order
+			if(all_empty) {
+				return {};
+			}
+			// sort our buffer by timestamps
 			std::sort(events_.begin(), events_.end(),
 				[](const edvs_event_t& a, const edvs_event_t& b) {
 					return a.t < b.t;
 				});
-			// return everything up to common time
+			// find location of common time in our buffer
 			auto it = std::upper_bound(events_.begin(), events_.end(), common_time,
 				[](uint64_t t, const edvs_event_t& e) { return t < e.t; });
+			// remove the corresponding chunk of events from our buffer and return them
 			std::vector<edvs_event_t> ret(events_.begin(), it);
 			events_.erase(events_.begin(), it);
 			return ret;

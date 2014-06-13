@@ -83,9 +83,12 @@ void EdvsVisual::OnEvent(const std::vector<Edvs::Event>& newevents)
 		events_recorded_.insert(events_recorded_.end(), newevents.begin(), newevents.end());
 	}
 
-	// std::cout << newevents.size() << std::endl;
+	// // std::cout << newevents.size() << std::endl;
+	// static int q = 0;
 	// for(const auto& e : newevents) {
-	// 	std::cout << e.t << " " << static_cast<int>(e.id) << std::endl;
+	// 	//if(q%1000 == 0)
+	// 		std::cout << e.t << " " << static_cast<int>(e.id) << std::endl;
+	// 	q++;
 	// }
 
 	// print time information

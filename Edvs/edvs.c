@@ -10,8 +10,8 @@
 #include <errno.h>
 
 #define EDVS_LOG_MESSAGE
-#define EDVS_LOG_WARNING
-//#define EDVS_LOG_ULTRA
+#define EDVS_LOG_VERBOSE
+// #define EDVS_LOG_ULTRA
 
 // ----- ----- ----- ----- ----- ----- ----- ----- ----- //
 
@@ -240,10 +240,12 @@ uint64_t get_micro_time()
 void sleep_ms(unsigned long long milli_secs)
 {
 	struct timespec ts;
-	ts.tv_sec = 0;
-	ts.tv_nsec = milli_secs * 1000000L;
+	ts.tv_sec = milli_secs / 1000L;
+	ts.tv_nsec = (milli_secs * 1000000L) % 1000000000L;
 	nanosleep(&ts, NULL);
 }
+
+uint64_t c_uint64_t_max = 0xFFFFFFFFFFFFFFFFL;
 
 edvs_device_streaming_t* edvs_device_streaming_open(edvs_device_t* dh, int device_tsm, int host_tsm, int master_slave_mode)
 {
@@ -260,10 +262,10 @@ edvs_device_streaming_t* edvs_device_streaming_open(edvs_device_t* dh, int devic
 	s->offset = 0;
 //	s->current_time = 0;
 //	s->last_timestamp = timestamp_limit(s->device_timestamp_mode);
-	s->ts_last_device = timestamp_limit(s->device_timestamp_mode);
+	s->ts_last_device = c_uint64_t_max;
 	s->ts_last_host = s->ts_last_device;
 	s->systime_offset = 0;
-	// reset device
+	// // reset device
 	if(edvs_device_write_str(dh, "R\n") != 0)
 		return 0;
 	sleep_ms(200);
@@ -336,6 +338,7 @@ int wait_for(edvs_device_streaming_t* s, const unsigned char* str)
 			unsigned char c;
 			ssize_t n = edvs_device_read(s->device, &c, 1);
 			if(n != 1) {
+				printf("ERROR wait_for\n");
 				return -1;
 			}
 			if(c == str[pos]) {
@@ -364,7 +367,7 @@ int edvs_device_streaming_run(edvs_device_streaming_t* s)
 		printf("Running as normal (no master/slave)\n");
 #endif
 	}
-	if(s->master_slave_mode == 1) {
+	else if(s->master_slave_mode == 1) {
 #ifdef EDVS_LOG_MESSAGE
 		printf("Running as master\n");
 #endif
@@ -372,24 +375,21 @@ int edvs_device_streaming_run(edvs_device_streaming_t* s)
 		if(edvs_device_write_str(s->device, "!ETM+\n") != 0)
 			return -1;			
 	}
-	if(s->master_slave_mode == 2) {
+	else if(s->master_slave_mode == 2) {
 #ifdef EDVS_LOG_MESSAGE
 		printf("Running as slave\n");
 #endif
 	}
-// 	// reading everything which is in the pipe
-// #ifdef EDVS_LOG_MESSAGE
-// 		printf("Flushing...\n");
-// #endif
-// 	flush_device(s);
+	else {
+		printf("ERROR in edvs_device_streaming_run: Invalid master/slave mode!\n");
+	}
 	// starting event transmission
 #ifdef EDVS_LOG_MESSAGE
-		printf("Starting transmission\n");
+	printf("Starting transmission\n");
 #endif
 	if(edvs_device_write_str(s->device, "E+\n") != 0)
 		return -1;
 	// wait until we get E+\n back
-	sleep_ms(10);
 	wait_for(s, "E+\n");
 	return 0;
 }
@@ -416,6 +416,11 @@ void compute_timestamps_incremental(edvs_event_t* begin, size_t n, uint64_t last
 		uint64_t t = events->t;
 		// delta time since last
 		uint64_t dt = timestamp_dt(last_device, t, wrap);
+#ifdef EDVS_LOG_VERBOSE
+		if(t < last_device) {
+			printf("WRAPPING %zd -> %zd\n", last_device, t);
+		}
+#endif
 		// update timestamp
 		last_device = t;
 		// update timestamp
@@ -537,7 +542,7 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 		unsigned char a = buffer[i];
 		unsigned char b = buffer[i + 1];
 #ifdef EDVS_LOG_ULTRA
-		printf("e: %d %d\n", a, b);
+//		printf("e: %d %d\n", a, b);
 #endif
 		i += 2;
 		// check for and parse 1yyyyyyy pxxxxxxx
@@ -562,7 +567,7 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 			}
 			i ++;
 #ifdef EDVS_LOG_ULTRA
-			printf("s: len=%ld\n", special_data_len);
+//			printf("s: len=%ld\n", special_data_len);
 #endif
 		}
 		// read timestamp
@@ -592,6 +597,7 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 		else {
 			timestamp = 0;
 		}
+//		printf("%p %zd\n", s, timestamp);
 		// advance byte count
 		i += cNumBytesTimestamp;
 		// compute event time
@@ -703,7 +709,7 @@ ssize_t edvs_device_streaming_read(edvs_device_streaming_t* s, edvs_event_t* eve
 	if(num_events > 0) {
 		uint64_t last_device = s->ts_last_device;
 		uint64_t last_host = s->ts_last_host;
-		if(s->ts_last_host == cTimestampLimit) {
+		if(s->ts_last_host == c_uint64_t_max) {
 			last_device = events->t;
 			last_host = 0;
 		}
