@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <limits>
 
 namespace Edvs
 {
@@ -93,6 +94,7 @@ namespace Edvs
 			}
 
 			void run() {
+				last_time_ = 0;
 				impl_->run();
 			}
 
@@ -116,15 +118,22 @@ namespace Edvs
 				impl_.reset();
 			}
 
-			std::vector<edvs_event_t> read() const
+			std::vector<edvs_event_t> read()
 			{
 				if(!is_open()) {
 					return {};
 				}
 				else {
-					return impl_->pop_events();
+					std::vector<edvs_event_t> v = impl_->pop_events();
+					if(!v.empty()) {
+						last_time_ = v.back().t;
+					}
+					return v;
 				}
 			}
+
+			uint64_t last_timestamp() const
+			{ return last_time_; }
 
 			void write(const std::string& cmd) const {
 				std::string cmdn = cmd;
@@ -134,6 +143,7 @@ namespace Edvs
 
 		private:
 			mutable std::shared_ptr<impl::Handle> impl_;
+			mutable uint64_t last_time_;
 		};
 	}
 
@@ -207,29 +217,36 @@ namespace Edvs
 			}
 		}
 
-		std::vector<edvs_event_t> read() const
+		std::vector<edvs_event_t> read()
 		{
-			std::vector<edvs_event_t> v;
 			uint8_t id = 0;
 			// capture events
-			for(const auto& s : streams_) {
+			uint64_t common_time = std::numeric_limits<uint64_t>::max();
+			for(auto& s : streams_) {
 				// read maximum number of events from stream
 				auto tmp = s.read();
+				// update common time
+				common_time = std::min(common_time, s.last_timestamp());
 				// set correct ID
 				for(auto& e : tmp) {
 					e.id = id;
 				}
 				// add events
-				v.insert(v.end(), tmp.begin(), tmp.end());
+				events_.insert(events_.end(), tmp.begin(), tmp.end());
 				// std::cout << (int)id << " " << v.size() << std::endl;
 				id ++;
 			}
 			// sort events into correct order
-			std::sort(v.begin(), v.end(),
+			std::sort(events_.begin(), events_.end(),
 				[](const edvs_event_t& a, const edvs_event_t& b) {
 					return a.t < b.t;
 				});
-			return v;
+			// return everything up to common time
+			auto it = std::upper_bound(events_.begin(), events_.end(), common_time,
+				[](uint64_t t, const edvs_event_t& e) { return t < e.t; });
+			std::vector<edvs_event_t> ret(events_.begin(), it);
+			events_.erase(events_.begin(), it);
+			return ret;
 		}
 
 		void write(const std::string& cmd) const {
@@ -240,6 +257,7 @@ namespace Edvs
 
 	private:
 		std::vector<impl::SingleEventStream> streams_;
+		std::vector<edvs_event_t> events_;
 	};
 
 }

@@ -43,7 +43,7 @@ namespace Edvs
 				is_running_ = false;
 				thread_.join();
 			}
-			void threadMain(const EventStream& stream, callback_event_t callback_event) {
+			void threadMain(EventStream stream, callback_event_t callback_event) {
 				while(is_running_ && !stream.eos()) {
 					std::vector<edvs_event_t> buffer = stream.read();
 					if(callback_event && !buffer.empty())
