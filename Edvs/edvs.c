@@ -193,6 +193,18 @@ ssize_t edvs_device_write(edvs_device_t* dh, const char* data, size_t n)
 	}
 }
 
+int edvs_device_write_str(edvs_device_t* dh, const char* str)
+{
+	size_t n = strlen(str);
+	if(edvs_device_write(dh, str, n) != n) {
+		return -1;
+	}
+	else {
+		return 0;
+	}
+}
+
+
 /** Closes an edvs device connection */
 int edvs_device_close(edvs_device_t* dh)
 {
@@ -252,24 +264,24 @@ edvs_device_streaming_t* edvs_device_streaming_open(edvs_device_t* dh, int devic
 	s->ts_last_host = s->ts_last_device;
 	s->systime_offset = 0;
 	// reset device
-	if(edvs_device_write(dh, "R\n", 2) != 2)
+	if(edvs_device_write_str(dh, "R\n") != 0)
 		return 0;
 	sleep_ms(200);
 	// timestamp mode
 	if(s->device_timestamp_mode == 1) {
-		if(edvs_device_write(dh, "!E1\n", 4) != 4)
+		if(edvs_device_write_str(dh, "!E1\n") != 0)
 			return 0;
 	}
 	else if(s->device_timestamp_mode == 2) {
-		if(edvs_device_write(dh, "!E2\n", 4) != 4)
+		if(edvs_device_write_str(dh, "!E2\n") != 0)
 			return 0;
 	}
 	else if(s->device_timestamp_mode == 3) {
-		if(edvs_device_write(dh, "!E3\n", 4) != 4)
+		if(edvs_device_write_str(dh, "!E3\n") != 0)
 			return 0;
 	}
 	else {
-		if(edvs_device_write(dh, "!E0\n", 4) != 4)
+		if(edvs_device_write_str(dh, "!E0\n") != 0)
 			return 0;
 	}
 	// master slave
@@ -278,7 +290,7 @@ edvs_device_streaming_t* edvs_device_streaming_open(edvs_device_t* dh, int devic
 #ifdef EDVS_LOG_MESSAGE
 		printf("Arming master\n");
 #endif
-		if(edvs_device_write(dh, "!ETM0\n", 6) != 6)
+		if(edvs_device_write_str(dh, "!ETM0\n") != 0)
 			return 0;
 	}
 	else if(s->master_slave_mode == 2) {
@@ -286,7 +298,7 @@ edvs_device_streaming_t* edvs_device_streaming_open(edvs_device_t* dh, int devic
 #ifdef EDVS_LOG_MESSAGE
 		printf("Arming slave\n");
 #endif
-		if(edvs_device_write(dh, "!ETS\n", 5) != 5)
+		if(edvs_device_write_str(dh, "!ETS\n") != 0)
 			return 0;
 	}
 	return s;
@@ -357,7 +369,7 @@ int edvs_device_streaming_run(edvs_device_streaming_t* s)
 		printf("Running as master\n");
 #endif
 		// master is giving the go command
-		if(edvs_device_write(s->device, "!ETM+\n", 6) != 6)
+		if(edvs_device_write_str(s->device, "!ETM+\n") != 0)
 			return -1;			
 	}
 	if(s->master_slave_mode == 2) {
@@ -374,7 +386,7 @@ int edvs_device_streaming_run(edvs_device_streaming_t* s)
 #ifdef EDVS_LOG_MESSAGE
 		printf("Starting transmission\n");
 #endif
-	if(edvs_device_write(s->device, "E+\n", 3) != 3)
+	if(edvs_device_write_str(s->device, "E+\n") != 0)
 		return -1;
 	// wait until we get E+\n back
 	sleep_ms(10);

@@ -95,6 +95,11 @@ ssize_t edvs_device_read(edvs_device_t* dh, unsigned char* data, size_t n);
 /** Writes data to an edvs device */
 ssize_t edvs_device_write(edvs_device_t* dh, const char* data, size_t n);
 
+/** Writes a string to the device
+ * The string has to be null terminated. The null terminator is not written.
+ */
+int edvs_device_write_str(edvs_device_t* dh, const char* str);
+
 /** Closes an edvs device connection */
 int edvs_device_close(edvs_device_t* dh);
 
