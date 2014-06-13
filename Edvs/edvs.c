@@ -382,6 +382,7 @@ int edvs_device_streaming_run(edvs_device_streaming_t* s)
 	return 0;
 }
 
+/** Computes delta time between timestamps considering a possible wrap */
 uint64_t timestamp_dt(uint64_t t1, uint64_t t2, uint64_t wrap)
 {
 	if(t2 >= t1) {
@@ -394,39 +395,15 @@ uint64_t timestamp_dt(uint64_t t1, uint64_t t2, uint64_t wrap)
 	}
 }
 
+/** Unwraps timestamps the easy way (works good for 3 byte ts, be careful with 2 byte ts) */
 void compute_timestamps_incremental(edvs_event_t* begin, size_t n, uint64_t last_device, uint64_t last_host, uint64_t wrap)
 {
 	edvs_event_t* end = begin + n;
 	for(edvs_event_t* events=begin; events!=end; ++events) {
 		// current device time (wrapped)
 		uint64_t t = events->t;
-//		printf("%zd %p\n", t, events);
 		// delta time since last
 		uint64_t dt = timestamp_dt(last_device, t, wrap);
-
-// 		// HACK
-// 		// sometimes we get wrong timestamps
-// 		// so we only do the wrapping if the dt is not too big
-// 		if(dt > 32000) { // 32 milliseconds (dangerous if less than 30 events/second)
-// 			// ignore wrapping
-// #ifdef EDVS_LOG_WARNING
-// 			printf("IGNORED WRAPPING old=%zd, new=%zd, wrap=%zd\n", last_device, t, wrap);
-// #endif
-// 			// do not update last_device or last_host
-// 		}
-// 		else {
-// 			// do wrapping
-// #ifdef EDVS_LOG_WARNING
-// 			if(t < last_device) {
-// 				printf("WRAPPING old=%zd, new=%zd, wrap=%zd\n", last_device, t, wrap);
-// 			}
-// #endif
-// 			// update timestamp
-// 			last_device = t;
-// 			// update timestamp
-// 			last_host += dt;
-// 		}
-
 		// update timestamp
 		last_device = t;
 		// update timestamp
@@ -452,6 +429,7 @@ uint64_t sum_dt(edvs_event_t* begin, edvs_event_t* end, uint64_t last_device, ui
 	return dtsum_device;
 }
 
+/** Unwraps timestamps using some ugly black magic */
 void compute_timestamps_systime(edvs_event_t* begin, size_t n, uint64_t last_device, uint64_t last_host, uint64_t wrap, uint64_t systime)
 {
 	edvs_event_t* end = begin + n;
