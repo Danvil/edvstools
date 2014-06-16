@@ -268,7 +268,7 @@ edvs_device_streaming_t* edvs_device_streaming_open(edvs_device_t* dh, int devic
 	// // reset device
 	if(edvs_device_write_str(dh, "R\n") != 0)
 		return 0;
-	sleep_ms(1000);
+	sleep_ms(200);
 	// timestamp mode
 	if(s->device_timestamp_mode == 1) {
 		if(edvs_device_write_str(dh, "!E1\n") != 0)
