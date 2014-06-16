@@ -42,6 +42,12 @@ namespace Edvs
 				thread_ = boost::thread(&Handle::runImpl, this);
 			}
 
+			bool eos()
+			{
+				boost::interprocess::scoped_lock<boost::mutex> lock(mtx_);
+				return edvs_eos(h) && events_.empty();
+			}
+
 			std::vector<edvs_event_t> pop_events()
 			{
 				boost::interprocess::scoped_lock<boost::mutex> lock(mtx_);
@@ -108,7 +114,7 @@ namespace Edvs
 			}
 
 			bool eos() const {
-				return !impl_ || edvs_eos(impl_->handle());
+				return !impl_ || impl_->eos();
 			}
 
 			void close() {
@@ -197,9 +203,15 @@ namespace Edvs
 		}
 
 		bool eos() const {
+			// no stream => eos
 			if(streams_.size() == 0) {
+				return true;
+			}
+			// still events in queue => not eos
+			if(!events_.empty()) {
 				return false;
 			}
+			// check if any stream is eos
 			for(const auto& s : streams_) {
 				if(s.eos()) {
 					return true;
@@ -232,9 +244,13 @@ namespace Edvs
 				// check if streams return nothing
 				all_empty = all_empty && tmp.empty();
 				// set correct ID
-				for(auto& e : tmp) {
-					e.id = id;
-//					std::cout << (int)(e.id) << " " << e.t << std::endl;
+				// we only do this for multiple streams
+				// FIXME need a mechanism to check if we need to do it ...
+				if(streams_.size() > 1) {
+					for(auto& e : tmp) {
+						e.id = id;
+	//					std::cout << (int)(e.id) << " " << e.t << std::endl;
+					}
 				}
 				// add events to our buffer
 				events_.insert(events_.end(), tmp.begin(), tmp.end());
