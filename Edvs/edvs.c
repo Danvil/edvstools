@@ -908,11 +908,15 @@ int parse_uri_net(const char* curi, char** ip, int* port, int* dtsm, int* htsm, 
 		if(strcmp(token,"dtsm")==0) {
 			*dtsm = atoi(val);
 		}
-		if(strcmp(token,"htsm")==0) {
+		else if(strcmp(token,"htsm")==0) {
 			*htsm = atof(val);
 		}
-		if(strcmp(token,"msmode")==0) {
+		else if(strcmp(token,"msmode")==0) {
 			*msmode = atoi(val);
+		}
+		else {
+			printf("ERROR in parse_uri_file: Invalid URI token '%s'!\n", token);
+			return 0;
 		}
 		// next token
 		token = strtok(NULL, "=");
@@ -950,14 +954,18 @@ int parse_uri_device(const char* curi, char** name, int* baudrate, int* dtsm, in
 		if(strcmp(token,"baudrate")==0) {
 			*baudrate = atoi(val);
 		}
-		if(strcmp(token,"dtsm")==0) {
+		else if(strcmp(token,"dtsm")==0) {
 			*dtsm = atoi(val);
 		}
-		if(strcmp(token,"htsm")==0) {
+		else if(strcmp(token,"htsm")==0) {
 			*htsm = atof(val);
 		}
-		if(strcmp(token,"msmode")==0) {
+		else if(strcmp(token,"msmode")==0) {
 			*msmode = atoi(val);
+		}
+		else {
+			printf("ERROR in parse_uri_file: Invalid URI token '%s'!\n", token);
+			return 0;
 		}
 		// next token
 		token = strtok(NULL, "=");
@@ -993,8 +1001,12 @@ int parse_uri_file(const char* curi, char** fn, uint64_t* dt, float* ts)
 		if(strcmp(token,"dt")==0) {
 			*dt = atoi(val);
 		}
-		if(strcmp(token,"ts")==0) {
+		else if(strcmp(token,"ts")==0) {
 			*ts = atof(val);
+		}
+		else {
+			printf("ERROR in parse_uri_file: Invalid URI token '%s'!\n", token);
+			return 0;
 		}
 		// next token
 		token = strtok(NULL, "=");
