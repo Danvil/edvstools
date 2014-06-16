@@ -77,6 +77,11 @@ namespace Edvs
 			return is_open() && edvs_eos(h) && events_.empty();
 		}
 
+		bool is_live() const
+		{
+			return edvs_is_live(h) == 1;
+		}
+
 		std::vector<edvs_event_t> read()
 		{
 			if(!is_open()) {
@@ -209,6 +214,19 @@ namespace Edvs
 				}
 			}
 			return false;
+		}
+
+		bool is_live() const
+		{
+			if(streams_.empty()) {
+				return false;
+			}
+
+			bool a = true;
+			for(const auto& s : streams_) {
+				a = a && s->is_live();
+			}
+			return a;
 		}
 
 		void close()

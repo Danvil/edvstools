@@ -1133,6 +1133,18 @@ int edvs_close(edvs_stream_handle s)
 	return -1;
 }
 
+int edvs_is_live(edvs_stream_handle s)
+{
+	if(s->type == EDVS_DEVICE_STREAM) {
+		return 1;
+	}
+	if(s->type == EDVS_FILE_STREAM) {
+		return 0;
+	}
+	printf("edvs_is_live: unknown stream type\n");
+	return -1;
+}
+
 int edvs_eos(edvs_stream_handle s)
 {
 	if(s->type == EDVS_DEVICE_STREAM) {

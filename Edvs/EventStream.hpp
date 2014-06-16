@@ -16,6 +16,7 @@ namespace Edvs
 		virtual ~IEventStream() {}
 		virtual bool is_open() const = 0;
 		virtual bool eos() const = 0;
+		virtual bool is_live() const = 0;
 		virtual std::vector<edvs_event_t> read() = 0;
 	};
 

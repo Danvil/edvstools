@@ -42,7 +42,18 @@ int edvs_run(edvs_stream_handle h);
  */
 int edvs_eos(edvs_stream_handle h);
 
+/** Returns the master/slave mode
+ * Returns 0 if normal mode (no master/slave)
+ * Returns 1 if master
+ * Returns 2 if slave
+ */
 int edvs_get_master_slave_mode(edvs_stream_handle h);
+
+/** Checks if the stream is live
+ * Returns 1 if the stream is a live stream (serial port / network)
+ * Return 0 if the stream is not a live stream (file)
+ */
+int edvs_is_live(edvs_stream_handle h);
 
 /** Closes an edvs event stream */
 int edvs_close(edvs_stream_handle h);
