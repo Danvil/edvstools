@@ -1,13 +1,13 @@
 #include "WdgtEdvsVisual.h"
-#include <boost/interprocess/sync/scoped_lock.hpp>
+#include <Edvs/EventIO.hpp>
+#include <QtGui/QFileDialog>
 #include <iostream>
-#include <time.h>
 
 
 const unsigned int RetinaSize = 128;
 const int cDecay = 24;
 const int cDisplaySize = 4*128;
-const int cUpdateInterval = 10;
+const int cUpdateInterval = 0;
 const int cDisplayInterval = 20;
 
 // blue/yellow color scheme
@@ -20,12 +20,14 @@ const QRgb cColorMid = qRgb(128, 128, 128);
 const QRgb cColorOn = qRgb(255, 255, 255);
 const QRgb cColorOff = qRgb(0, 0, 0);
 
-EdvsVisual::EdvsVisual(const Edvs::EventStream& dh, QWidget *parent)
-    : QWidget(parent)
+EdvsVisual::EdvsVisual(const std::shared_ptr<Edvs::IEventStream>& stream, QWidget *parent)
+:	QWidget(parent),
+	edvs_event_stream_(stream)
 {
 	ui.setupUi(this);
 
-	image_ = QImage(RetinaSize, RetinaSize, QImage::Format_RGB32);
+	connect(ui.pushButtonRecord, SIGNAL(clicked()), this, SLOT(OnButton()));
+	is_recording_ = false;
 
 	connect(&timer_update_, SIGNAL(timeout()), this, SLOT(Update()));
 	timer_update_.setInterval(cUpdateInterval);
@@ -34,37 +36,57 @@ EdvsVisual::EdvsVisual(const Edvs::EventStream& dh, QWidget *parent)
 	connect(&timer_display_, SIGNAL(timeout()), this, SLOT(Display()));
 	timer_display_.setInterval(cDisplayInterval);
 	timer_display_.start();
-
-	// start capture
-	edvs_event_stream_ = dh;
-	edvs_event_capture_ = Edvs::EventCapture(edvs_event_stream_,
-		boost::bind(&EdvsVisual::OnEvent, this, _1));
 }
 
 EdvsVisual::~EdvsVisual()
+{}
+
+void EdvsVisual::OnButton()
 {
-	edvs_event_capture_.stop();
+	if(ui.pushButtonRecord->isChecked()) {
+		// start recording
+		ui.pushButtonRecord->setText("Recording... (press to stop)");
+		is_recording_ = true;
+	}
+	else {
+		// stop recording
+		ui.pushButtonRecord->setText("Start recording");
+		is_recording_ = false;
+		// get filename
+		QString fn = QFileDialog::getSaveFileName(this, "Select file to save recording");
+		if(fn != "") {
+			Edvs::SaveEvents(fn.toStdString(), events_recorded_);
+			std::cout << "Saved " << events_recorded_.size() << " events to file '" << fn.toStdString() << "'" << std::endl;
+		}
+		events_recorded_.clear();
+	}
 }
 
-void EdvsVisual::OnEvent(const std::vector<Edvs::Event>& newevents)
+void EdvsVisual::Update()
 {
-	// just store events
-	// protect common vector with a mutex to avoid race conditions
-	boost::interprocess::scoped_lock<boost::mutex> lock(events_mtx_);
-	events_.insert(events_.end(), newevents.begin(), newevents.end());
-	// timespec ts;
-	// ts.tv_sec = 0;
-	// ts.tv_nsec = 1000;
-	// nanosleep(&ts, &ts);
+	// read events
+	auto events = edvs_event_stream_->read();
+
+	if(is_recording_) {
+		events_recorded_.insert(events_recorded_.end(), events.begin(), events.end());
+	}
 
 	// print time information
-	if(!newevents.empty()) {
+	if(!events.empty()) {
 		static uint64_t last_time = 0;
-		uint64_t current_time = newevents.back().t;
+		uint64_t current_time = events.back().t;
 		if(current_time >= last_time + 1000000) {
 			std::cout << static_cast<float>(current_time)/1000000.0f << std::endl;
-			last_time = current_time;
+			last_time += 1000000;
 		}
+	}
+
+	// write events to image
+	for(const Edvs::Event& e : events) {
+		if(e.id >= items_.size() || !items_[e.id].label) {
+			addItem(e.id);
+		}
+		items_[e.id].image.setPixel(e.x, e.y, e.parity ? cColorOn : cColorOff);
 	}
 }
 
@@ -88,27 +110,25 @@ QRgb DecayColor(QRgb color, QRgb target, int decay)
 	);
 }
 
-void EdvsVisual::Update()
+void EdvsVisual::Display()
 {
-	// write events
-	{
-		boost::interprocess::scoped_lock<boost::mutex> lock(events_mtx_);
-		for(const Edvs::Event& e : events_) {
-			if(e.id == 0)
-			image_.setPixel(e.x, e.y, e.parity ? cColorOn : cColorOff);
+	for(const Item& i : items_) {
+		// apply decay
+		unsigned int* bits = (unsigned int*)i.image.bits();
+		const unsigned int N = i.image.height() * i.image.width();
+		for(int i=0; i<N; i++, bits++) {
+			*bits = DecayColor(*bits, cColorMid, cDisplayInterval*cDecay);
 		}
-		events_.clear();
+		// rescale so that we see more :) and display
+		i.label->setPixmap(QPixmap::fromImage(i.image.scaled(cDisplaySize, cDisplaySize)));
 	}
 }
 
-void EdvsVisual::Display()
+void EdvsVisual::addItem(uint8_t id)
 {
-	// apply decay
-	unsigned int* bits = (unsigned int*)image_.bits();
-	const unsigned int N = image_.height() * image_.width();
-	for(int i=0; i<N; i++, bits++) {
-		*bits = DecayColor(*bits, cColorMid, cDisplayInterval*cDecay);
-	}
-	// rescale so that we see more :) and display
-	ui.label->setPixmap(QPixmap::fromImage(image_.scaled(cDisplaySize, cDisplaySize)));
+	items_.resize(id+1);
+	items_[id].image = QImage(RetinaSize, RetinaSize, QImage::Format_RGB32);
+	QLabel* label = new QLabel();
+	ui.gridLayout->addWidget(label, 0, id);
+	items_[id].label = label;
 }
