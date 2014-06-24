@@ -44,7 +44,7 @@ unsigned int clip_retina_coord(float u)
 				static_cast<int>(std::floor(0.5f + u)))));
 }
 
-void create_video(const std::vector<Edvs::Event>& events, uint64_t dt, boost::format fmt_fn, bool skip_empty)
+void create_video(const std::vector<Edvs::Event>& events, uint64_t dt, boost::format fmt_fn, bool skip_empty, uint8_t id=0)
 {
 	mat8 retina(RETINA_SIZE, RETINA_SIZE);
 	uint64_t tbase = events.front().t;
@@ -55,13 +55,18 @@ void create_video(const std::vector<Edvs::Event>& events, uint64_t dt, boost::fo
 		unsigned int num = 0;
 		while(it != events.end()) {
 			const Edvs::Event& event = *it;
+			if(event.id != id) {
+				it++;
+				continue;
+			}
 			uint64_t t = event.t;
 			if(t >= tbase + dt) {
 				break;
 			}
+			unsigned char p = static_cast<unsigned char>(127.0f*static_cast<float>(t - tbase)/static_cast<float>(dt));
 			unsigned int x = clip_retina_coord(event.x);
 			unsigned int y = clip_retina_coord(event.y);
-			unsigned char c = (event.parity ? 255 : 0);
+			unsigned char c = (event.parity ? 127+p : 127-p);
 			retina(y, x) = c;
 			it++;
 			num++;
@@ -82,6 +87,7 @@ int main(int argc, char** argv)
 	uint64_t p_skip = 0;
 	int64_t p_dt = 1000000/25;
 	bool p_skip_empty = false;
+	unsigned p_id = 0;
 
 	namespace po = boost::program_options;
 	// Declare the supported options.
@@ -92,6 +98,7 @@ int main(int argc, char** argv)
 		("dir", po::value(&p_dir), "filename for output directory")
 		("dt", po::value(&p_dt)->default_value(p_dt), "time per frame in microseconds")
 		("noempty", po::value(&p_skip_empty), "whether to skip empty frames")
+		("id", po::value(&p_id)->default_value(p_id), "sensor id")
 	;
 
 	po::variables_map vm;
@@ -116,7 +123,7 @@ int main(int argc, char** argv)
 
 	// create video
 	boost::format fmt_fn(p_dir + "/%05d.png");
-	create_video(events, p_dt, fmt_fn, p_skip_empty);
+	create_video(events, p_dt, fmt_fn, p_skip_empty, p_id);
 
 	// hit for ffmpeg
 	std::cout << "Run the following command to create the video:" << std::endl;
