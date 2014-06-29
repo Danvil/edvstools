@@ -161,14 +161,42 @@ std::vector<Event> LoadEventsTable(const std::string& filename, char separator)
 		e.t = boost::lexical_cast<uint64_t>(tokens[0]);
 		e.x = boost::lexical_cast<uint16_t>(tokens[1]);
 		e.y = boost::lexical_cast<uint16_t>(tokens[2]);
-		e.parity = boost::lexical_cast<uint8_t>(tokens[3]);
-		e.id = boost::lexical_cast<unsigned int>(tokens[4]);
+		e.parity = boost::lexical_cast<unsigned>(tokens[3]);
+		e.id = boost::lexical_cast<unsigned>(tokens[4]);
 		// std::istringstream iss(line);
 		// iss >> e.t >> e.x >> e.y >> e.parity >> e.id;
 		events.push_back(e);
 	}
 	return events;
 }
+
+std::vector<Edvs::Event> LoadEventsEBSLAM3(const std::string& filename)
+{
+	std::vector<Event> events;
+	events.reserve(100000);
+	std::ifstream is(filename);
+	std::string line;
+	std::vector<std::string> tokens;
+	Event e;
+	while(getline(is, line)) {
+		// eat \r at the end of line
+		if(line[line.size() - 1] == '\r') {
+			line.erase(line.size() - 1, 1);
+		}
+		// parse line
+		boost::split(tokens, line, boost::is_any_of("\t"));
+		e.t = boost::lexical_cast<uint64_t>(tokens[5]);
+		e.x = boost::lexical_cast<uint16_t>(tokens[3]);
+		e.y = boost::lexical_cast<uint16_t>(tokens[4]);
+		e.parity = boost::lexical_cast<unsigned>(tokens[6]);
+		e.id = 0;
+		// std::istringstream iss(line);
+		// iss >> e.t >> e.x >> e.y >> e.parity >> e.id;
+		events.push_back(e);
+	}
+	return events;
+}
+
 
 void SaveEventsTable(const std::string& filename, const std::vector<Edvs::Event>& events, char sep)
 {
