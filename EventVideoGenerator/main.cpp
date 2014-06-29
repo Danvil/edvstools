@@ -44,34 +44,36 @@ unsigned int clip_retina_coord(float u)
 				static_cast<int>(std::floor(0.5f + u)))));
 }
 
-void create_video(const std::vector<Edvs::Event>& events, uint64_t dt, boost::format fmt_fn, bool skip_empty)
+void create_video(const std::vector<Edvs::Event>& events, uint64_t dt, uint64_t decay, boost::format fmt_fn, bool skip_empty)
 {
 	mat8 retina(RETINA_SIZE, RETINA_SIZE);
-	uint64_t tbase = events.front().t;
-	auto it = events.begin();
+	uint64_t frametime = events.front().t + dt;
+	auto it_begin = events.begin();
 	unsigned frame_save_id = 0;
-	for(unsigned int frame=0; it!=events.end(); frame++) {
+	for(unsigned frame=0; it_begin!=events.end(); frame++, frametime+=dt) {
+		// prepare frame
 		std::fill(retina.data.begin(), retina.data.end(), 128);
-		unsigned int num = 0;
-		while(it != events.end()) {
+		// find first and last event
+		uint64_t t_begin = (frametime <= decay) ? 0 : frametime - decay;
+		auto time_cmp = [](const Edvs::Event& e, uint64_t t) { return e.t < t; };
+		it_begin = std::lower_bound(it_begin, events.end(), t_begin, time_cmp);
+		auto it_end = std::lower_bound(it_begin, events.end(), frametime, time_cmp);
+		// skip empty frames
+		if(skip_empty && it_begin == it_end) {
+			continue;
+		}
+		// paint events
+		for(auto it=it_begin; it!=it_end; ++it) {
 			const Edvs::Event& event = *it;
-			uint64_t t = event.t;
-			if(t >= tbase + dt) {
-				break;
-			}
 			unsigned int x = clip_retina_coord(event.x);
 			unsigned int y = clip_retina_coord(event.y);
-			unsigned char c = (event.parity ? 255 : 0);
+			unsigned char d = static_cast<unsigned>(127.0f*static_cast<float>(frametime - event.t)/static_cast<float>(decay));
+			unsigned char c = (event.parity ? 255-d : d);
 			retina(y, x) = c;
-			it++;
-			num++;
 		}
-		std::cout << "Frame " << frame << ": time=" << it->t << ", #events=" << num << std::endl;
-		if(num > 0) {
-			save_png((fmt_fn % frame_save_id).str(), retina);
-			frame_save_id ++;
-		}
-		tbase += dt;
+		std::cout << "Frame " << frame << ": time=" << frametime << ", #events=" << std::distance(it_begin, it_end) << std::endl;
+		save_png((fmt_fn % frame_save_id).str(), retina);
+		frame_save_id ++;
 	}
 }
 
@@ -80,7 +82,8 @@ int main(int argc, char** argv)
 	std::string p_fn = "/home/david/Documents/DataSets/edvs_raoul_mocap_2/33/events";
 	std::string p_dir = "/media/tmp/edvs_video";
 	uint64_t p_skip = 0;
-	int64_t p_dt = 1000000/25;
+	uint64_t p_dt = 1000000/25;
+	uint64_t p_decay = 100*1000;
 	bool p_skip_empty = false;
 
 	namespace po = boost::program_options;
@@ -90,7 +93,8 @@ int main(int argc, char** argv)
 		("help", "produce help message")
 		("fn", po::value(&p_fn), "filename for input event file")
 		("dir", po::value(&p_dir), "filename for output directory")
-		("dt", po::value(&p_dt)->default_value(p_dt), "time per frame in microseconds")
+		("dt", po::value(&p_dt)->default_value(p_dt), "frame time increase in microseconds")
+		("decay", po::value(&p_decay)->default_value(p_decay), "displayed time per frame in microseconds")
 		("noempty", po::value(&p_skip_empty), "whether to skip empty frames")
 	;
 
@@ -116,7 +120,7 @@ int main(int argc, char** argv)
 
 	// create video
 	boost::format fmt_fn(p_dir + "/%05d.png");
-	create_video(events, p_dt, fmt_fn, p_skip_empty);
+	create_video(events, p_dt, p_decay, fmt_fn, p_skip_empty);
 
 	// hit for ffmpeg
 	std::cout << "Run the following command to create the video:" << std::endl;
