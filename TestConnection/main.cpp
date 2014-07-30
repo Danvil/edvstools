@@ -1,12 +1,11 @@
 #include <Edvs/EventStream.hpp>
-#include <Edvs/EventCapture.hpp>
-#include <boost/bind.hpp>
 #include <boost/program_options.hpp>
 #include <iostream>
 #include <sys/time.h>
 #include <stdlib.h>
 
-size_t GetTimeMU() {
+size_t GetTimeMU()
+{
 	timeval a;
 	gettimeofday(&a, NULL);
 	return a.tv_sec * 1000000 + a.tv_usec;
@@ -41,20 +40,10 @@ void MeasureSpeed(const std::vector<Edvs::Event>& events)
 void ShowEvents(const std::vector<Edvs::Event>& events)
 {
 	std::cout << "Got " << events.size() << " events: ";
-	for(std::vector<Edvs::Event>::const_iterator it=events.begin(); it!=events.end(); it++) {
-		std::cout << *it << ", ";
+	for(const auto& e : events) {
+		std::cout << e << ", ";
 	}
 	std::cout << std::endl;
-}
-
-void OnEvent(const std::vector<Edvs::Event>& events, bool show_events, bool measure_speed)
-{
-	if(measure_speed) {
-		MeasureSpeed(events);
-	}
-	if(show_events) {
-		ShowEvents(events);
-	}
 }
 
 int main(int argc, char* argv[])
@@ -91,17 +80,19 @@ int main(int argc, char* argv[])
 	}
 
 	std::cout << "Opening event stream ..." << std::endl;
-	Edvs::EventStream stream(p_uri);
+	auto stream = Edvs::OpenEventStream(p_uri);
 
 	std::cout << "Running event capture ..." << std::endl;
-	Edvs::EventCapture capture(stream,
-		boost::bind(OnEvent, _1, p_show_events, p_measure_speed));
-
-	// user input loop - press q to quit
-	std::string str;
-	while(str != "q") {
-		// read command
-		std::cin >> str;
+	while(!stream->eos()) { // FIXME make it possible to stop the loop by pressing a button
+		// read events
+		auto events = stream->read();
+		// process events
+		if(p_measure_speed) {
+			MeasureSpeed(events);
+		}
+		if(p_show_events) {
+			ShowEvents(events);
+		}
 	}
 
 	return 1;

@@ -57,6 +57,9 @@ int main(int argc, char** argv)
 	else if(p_in_format == "jc") {
 		events = Edvs::LoadEventsJC(p_in, true);
 	}
+	else if(p_in_format == "ebslam3") {
+		events = Edvs::LoadEventsEBSLAM3(p_in);
+	}
 	else if(p_in_format == "old") {
 		events = Edvs::LoadEventsOld(p_in, true);
 	}

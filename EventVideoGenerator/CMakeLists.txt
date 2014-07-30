@@ -2,6 +2,7 @@ PROJECT(EventVideoGenerator)
 
 INCLUDE_DIRECTORIES(
 	${edvstools_SOURCE_DIR}
+	/usr/include/eigen3
 )
 
 ADD_EXECUTABLE(${PROJECT_NAME}

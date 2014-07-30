@@ -5,8 +5,6 @@
 #include <QtCore/QTimer>
 #include "ui_WdgtEdvsVisual.h"
 #include <Edvs/EventStream.hpp>
-#include <Edvs/EventCapture.hpp>
-#include <boost/thread.hpp>
 #include <vector>
 
 class EdvsVisual : public QWidget
@@ -14,23 +12,31 @@ class EdvsVisual : public QWidget
     Q_OBJECT
 
 public:
-	EdvsVisual(const Edvs::EventStream& dh, QWidget *parent = 0);
+	EdvsVisual(const std::shared_ptr<Edvs::IEventStream>& stream, QWidget *parent = 0);
 	~EdvsVisual();
 
-	void OnEvent(const std::vector<Edvs::Event>& events);
-
 public Q_SLOTS:
+	void OnButton();
 	void Update();
 	void Display();
 
 private:
-	Edvs::EventStream edvs_event_stream_;
-	Edvs::EventCapture edvs_event_capture_;
-	std::vector<Edvs::Event> events_;
-	boost::mutex events_mtx_;
+	void addItem(uint8_t id);
+
+private:
+	std::shared_ptr<Edvs::IEventStream> edvs_event_stream_;
 	QTimer timer_update_;
 	QTimer timer_display_;
-	QImage image_;
+
+	struct Item {
+		QImage image;
+		QLabel* label;
+	};
+
+	std::vector<Item> items_;
+
+	bool is_recording_;
+	std::vector<Edvs::Event> events_recorded_;
 
 private:
     Ui::EdvsVisualClass ui;

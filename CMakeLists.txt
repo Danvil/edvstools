@@ -15,7 +15,6 @@ add_subdirectory(Edvs)
 add_subdirectory(TestConnection)
 add_subdirectory(ShowEvents)
 
-add_subdirectory(RecordEvents)
 add_subdirectory(CheckEvents)
 add_subdirectory(ConvertEvents)
 add_subdirectory(EventVideoGenerator)
@@ -23,7 +22,5 @@ add_subdirectory(EventViewer)
 add_subdirectory(Terminal)
 
 add_subdirectory(MathLink)
-
-add_subdirectory(MultiEdvs)
 
 add_subdirectory(Examples)

@@ -27,6 +27,12 @@ namespace Edvs
 	 */
 	std::vector<Edvs::Event> LoadEventsJC(const std::string& filename, bool unwrap_timestamps=false);
 
+	/** Loads events from EB-SLAM-3D file format
+	 * Each line is one event.
+	 * Line format: KX, KY, KD, X, Y, T, P
+	 */
+	std::vector<Edvs::Event> LoadEventsEBSLAM3(const std::string& filename);
+
 	/** Loads events from an old binary file format
 	 * 		for each event 21 bytes of binary data
 	 * 		0-3: id as uint32_t

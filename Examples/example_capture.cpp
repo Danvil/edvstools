@@ -1,24 +1,24 @@
-#include <Edvs/EventCapture.hpp>
+#include <Edvs/EventStream.hpp>
 #include <iostream>
-
-void OnEvent(const std::vector<Edvs::Event>& events)
-{
-	if(events.size() > 0) {
-		std::cout << "Time " << events.back().t << ": " << events.size() << " events" << std::endl;
-	}
-}
 
 int main(int argc, char* argv[])
 {
+	// read uri
 	if(argc != 2) {
 		std::cout << "Wrong usage" << std::endl;
 		return 0;
 	}
-	// run event capture
-	Edvs::EventStream stream(argv[1]);
-	Edvs::EventCapture capture(stream, &OnEvent);
-	// run until EOF or Ctrl+C
-	while(!stream.eos());
+	// open stream
+	std::shared_ptr<Edvs::IEventStream> stream = Edvs::OpenEventStream(argv[1]);
+	// capture events (run until EOF or Ctrl+C)
+	while(!stream->eos()) {	// FIXME make it possible to stop the loop by pressing a button
+		// read events from stream
+		auto events = stream->read();
+		// display message
+		if(!events.empty()) {
+			std::cout << "Time " << events.back().t << ": " << events.size() << " events" << std::endl;
+		}
+	}
 	return 1;
 }
 

@@ -29,12 +29,31 @@ typedef struct edvs_stream_t* edvs_stream_handle;
  */
 edvs_stream_handle edvs_open(const char* uri);
 
+/** Runs the edvs event stream
+ * This starts event transmission
+ * @param return 0 on success and negative value on error
+ */
+int edvs_run(edvs_stream_handle h);
+
 /** Checks if the end of an edvs event stream has been reached
  * @param return 1 if end of stream has been reached
  *			0 if end of stream not reached
  *			negative value on error
  */
 int edvs_eos(edvs_stream_handle h);
+
+/** Returns the master/slave mode
+ * Returns 0 if normal mode (no master/slave)
+ * Returns 1 if master
+ * Returns 2 if slave
+ */
+int edvs_get_master_slave_mode(edvs_stream_handle h);
+
+/** Checks if the stream is live
+ * Returns 1 if the stream is a live stream (serial port / network)
+ * Return 0 if the stream is not a live stream (file)
+ */
+int edvs_is_live(edvs_stream_handle h);
 
 /** Closes an edvs event stream */
 int edvs_close(edvs_stream_handle h);
