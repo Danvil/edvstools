@@ -51,6 +51,31 @@ To connect to the eDVS sensor over network and display events
 
 	bin/ShowEvents --uri 192.168.201.62:56000
 
+### Convert files from binary into TSV format
+
+ShowEvents saves events in a binary file format to create smaller files and to be able to save and load quicker. If a more readable TSV text file is required for an external program, the tool ConvertEvents can be used to convert files.
+
+    bin/ConvertEvents --in /path/to/file --out /path/to/file.tsv
+
+Try `bin/ConvertEvents --h` for more options.
+
+### Creating an event video
+
+edvstools comes with the tool EventVideoGenerator which can create videos for a recorded event file. EventVideoGenerator only works with binary event files.
+
+    mkdir /tmp/eventvideo
+    bin/EventVideoGenerator --fn /path/to/file --dir /tmp/eventvideo
+
+This writes the video frames as PNG images to the specified directory. To create the video do as indicated on the command line and execute:
+
+    cd /tmp/eventvideo/
+    mogrify -format jpg *.png
+    avconv -f image2 -r 25 -i %05d.jpg -c:v libx264 -r 25 video.mp4
+
+This requires `libav-tools` and `imagemagick`.
+
+Try `bin/EventVideoGenerator --h` for more options.
+
 ## URI format
 
 Most edvs tools use a URI to indicate how the edvs device/file should be opened. The URI has the basic format `LINK?OPT1=VAL1&OPT2=VAL2&...&OPTn=VALn`
