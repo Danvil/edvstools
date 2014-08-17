@@ -88,9 +88,9 @@ Format: `DEVICE?baudrate=BAUD&dtsm=DTSM&htsm=HTSM&msmode=MSM`
 Format: `PATH?dt=DT&ts=TS`
 * PATH -- path to file
 * DT -- time in microseconds to add for each call to get events
-  * 0 -- system time is used to add the elapsed time since the last call (*default*); useful if realtime behaviour is desired
+  * 0 -- system time is used to add the elapsed time since the last call; useful if realtime behaviour is desired (*default*)
   * >0 -- fixed amount of DT is added; useful when events are processed much slower than they are captured
-* TS -- only if DT=0: scales the elapsed delta system time by the specified value (default is 1.0)
+* TS -- only if DT=0: scales the elapsed delta system time by the specified value (*default is 1.0*)
 
 ### Network
 
