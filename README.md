@@ -171,35 +171,32 @@ Format: `IP:PORT?dtsm=DTSM&htsm=HTSM&msmode=MSM`
 
 ### Capturing events (C++)
 
-The following sample demonstrates the usage of the C++ edvs event stream wrapper.
+The following sample demonstrates how to open and event stream and read events using the C++ interface.
 
-	#include <Edvs/EventCapture.hpp>
+	#include <Edvs/EventStream.hpp>
 	#include <iostream>
-
-	void OnEvent(const std::vector<Edvs::Event>& events)
-	{
-		if(events.size() > 0) {
-			std::cout << "Time " << events.back().t << ": " << events.size() << " events" << std::endl;
-		}
-	}
 
 	int main(int argc, char* argv[])
 	{
-		if(argc != 2) {
-			std::cout << "Wrong usage" << std::endl;
-			return 0;
+		// open stream (use first command line parameter as URI)
+		std::shared_ptr<Edvs::IEventStream> stream = Edvs::OpenEventStream(argv[1]);
+		// capture events (run until EOS or Ctrl+C)
+		while(!stream->eos()) {
+			// read events from stream
+			auto events = stream->read();
+			// display message
+			if(!events.empty()) {
+				std::cout << "Time " << events.back().t << ": " << events.size() << " events" << std::endl;
+			}
 		}
-		// run event capture
-		Edvs::EventStream stream(argv[1]);
-		Edvs::EventCapture capture(stream, &OnEvent);
-		// run until EOF or Ctrl+C
-		while(!stream.eos());
 		return 1;
 	}
 
+
+
 ### Capturing events (C)
 
-The following sample demonstrates how to read edvs events using plain C.
+The following sample demonstrates how to read edvs events in C.
 
 	#include "edvs.h"
 	#include <stdlib.h>
