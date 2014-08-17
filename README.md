@@ -1,29 +1,29 @@
-# Tools for the Embedded Dynamic Vision Sensor
+# edvstools
 
-This library is a collection of small tools for the embedded dynamic vision sensor.
+This library is a collection of tools for the embedded Dynamic Vision Sensor [eDVS](http://www.nst.ei.tum.de/projekte/edvs/). The Dynamic Vision Sensor also known as [siliconretina](http://siliconretina.ini.uzh.ch/wiki/index.php) is a asynchronous event-based vision sensor developed at the University of Zurich.
 
-* Edvs: eDVS connection handling (network and serial), saving/loading event files, sensor model
-* TestConnection: Connects to an eDVS sensor and computes event rate
-* ShowRetina: Connects to an eDVS sensor and displays events
-* RecordEvents: Connects to an eDVS sensor and records events to a file
-* CheckEvents: Checks timestamps in an event file
-* ConvertEvents: Converts saved event files between different data formats
-* EventViewer: Displays events stored in an event file
-* EventVideoGenerator: Generates a video from a saved event file
+**Tools / Libraries**
+
+* libEdvs -- access events from eDVS, serial port or network port connection handling, save/load event files
+* ShowEvents -- live visualization of events, save to a file and view saved event files
+* ConvertEvents -- converts saved event files between different data formats
+* EventVideoGenerator -- generates an mpeg video from a saved event file
 
 
-# Installation
+## Installation
 
-## Requirements
+edvstools is was tested under Ubuntu 14.04 with GCC 4.8.x. It should also run with older version.
 
+### Requirements
+
+* Build essential: `sudo apt-get install build-essential g++ cmake cmake-qt-gui`
 * [Boost](http://www.boost.org/) 1.46.1 or higher: `sudo apt-get install libboost-all-dev`
 * [Eigen](http://eigen.tuxfamily.org) 3.x: `sudo apt-get install libeigen3-dev`
 * [Qt](http://qt.nokia.com/) 4.x: `sudo apt-get install libqt4-dev`
-* Build essentials: `sudo apt-get install g++ build-essential cmake cmake-qt-gui`
 
-All apt-get dependencies in one line: `sudo apt-get install libboost-all-dev libeigen3-dev libqt4-dev g++ build-essential cmake cmake-qt-gui`
+All apt-get dependencies in one line: `sudo apt-get install build-essential g++ cmake cmake-qt-gui libboost-all-dev libeigen3-dev libqt4-dev `
 
-## Installation Instructions
+### Installation Instructions
 
 1. `git clone git://github.com/Danvil/edvstools.git`
 2. `cd edvstools; mkdir build; cd build`
@@ -31,23 +31,77 @@ All apt-get dependencies in one line: `sudo apt-get install libboost-all-dev lib
 4. `make`
 
 
-# Usage
+## Usage
 
-## Displaying events
-
-To connect to the eDVS sensor over network and display events
-
-	ShowEvents/ShowEvents --uri 192.168.201.62:56000
+### Displaying events
 
 To connect to the eDVS sensor over serial port and display events
 
-	ShowEvents/ShowEvents --uri /dev/ttyUSB0?baudrate=4000000
+	bin/ShowEvents --uri /dev/ttyUSB0?baudrate=4000000
+
+Same but use 24 bit timestamps instead of 16 bit timestamps
+
+	bin/ShowEvents --uri /dev/ttyUSB0?baudrate=4000000\&dtsm=2
 
 To replay an previously saved event file
 
-	ShowEvents/ShowEvents --uri /path/to/events
+	bin/ShowEvents --uri /path/to/events
 
-## Capturing events (C++)
+To connect to the eDVS sensor over network and display events
+
+	bin/ShowEvents --uri 192.168.201.62:56000
+
+## URI format
+
+Most edvs tools use a URI to indicate how the edvs device/file should be opened. The URI has the basic format `LINK?OPT1=VAL1&OPT2=VAL2&...&OPTn=VALn`
+There are tree URI types -- serial port, file, network -- explained in the following.
+
+**Important note:** The `&` character needs to be escaped as `\&` when entered at a linux terminal. So you have to type
+
+    bin/tool --uri /dev/ttyUSB0?baudrate=4000000\&dtsm=2
+                                               ^^^
+instead of
+
+    bin/tool --uri /dev/ttyUSB0?baudrate=4000000&dtsm=2
+
+### Serial port
+
+Format: `DEVICE?baudrate=BAUD&dtsm=DTSM&htsm=HTSM&msmode=MSM`
+* DEVICE -- path to device, i.e. /dev/ttyUSB0
+* BAUD -- serial port baudrate, i.e. 4000000 (default is 4000000)
+* DTSM -- device timestamp mode
+ * 0: no timestamps (sends `!E0`)
+ * 1: 16-bit timestamps (sends `!E1`)  (*default*)
+ * 2: 24-bit timestamps (sends `!E2`)
+ * 3: 32-bit timestamps (sends `!E3`)
+* HTSM -- host timestamp mode
+ * 0: use raw timestamps from device (*default*)
+ * 1: unwrap timestamps to guarantee monotonic increasing timestamps
+ * 2: (experimental) use a combination of system time and device timestamps
+* MSM -- master slave mode
+ * 0: disable master/slave mode (*default*)
+ * 1: operate as master (sends `!ETM0` and later `!ETM+`)
+ * 2: operate as slave (sends `!ETS`)
+
+### File
+
+Format: `PATH?dt=DT&ts=TS`
+* PATH -- path to file
+* DT -- time in microseconds to add for each call to get events
+  * 0 -- system time is used to add the elapsed time since the last call (*default*); useful if realtime behaviour is desired
+  * >0 -- fixed amount of DT is added; useful when events are processed much slower than they are captured
+* TS -- only if DT=0: scales the elapsed delta system time by the specified value (default is 1.0)
+
+### Network
+
+Format: `IP:PORT?dtsm=DTSM&htsm=HTSM&msmode=MSM`
+* IP -- network ip of edvs
+* PORT --- network port number of edvs
+* DTSM, HTSM and MSM identical to the serial port options
+
+## Code examples
+
+### Capturing events (C++)
 
 The following sample demonstrates the usage of the C++ edvs event stream wrapper.
 
@@ -75,7 +129,7 @@ The following sample demonstrates the usage of the C++ edvs event stream wrapper
 		return 1;
 	}
 
-## Capturing events (C)
+### Capturing events (C)
 
 The following sample demonstrates how to read edvs events using plain C.
 
