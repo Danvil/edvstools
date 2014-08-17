@@ -76,6 +76,49 @@ This requires `libav-tools` and `imagemagick`.
 
 Try `bin/EventVideoGenerator --h` for more options.
 
+## Troubleshooting
+
+#### I can not display event files
+
+Event files are a binary dump. Use ConvertEvents to generate a TSV file.
+
+#### I can not get correct timestamps
+
+Make sure you use the correct URI option dtsm (see URI format below). Make sure you escape the `&` sign as `\&` when entered in a linux terminal!
+
+#### I get a lot of "Error in high bit! Skipping a byte"
+
+Make sure that your edvs firmware uses the expected event file format. The current version of libEdvs expects the format `1yyyyyyy pxxxxxxx` (the test bit is 1!). See Edvs/edvs.c at line 549.
+
+Check if your edvs firmware supports differential timestamps. The introduction of differential timestamps changed the semantic of !E1, !E2 and !E3. If your firmware supports differential timestamps the following patch should help:
+
+    --- Edvs/edvs.c 2014-08-05 17:55:39.302022615 +0200
+    +++ /tmp/edvs.c 2014-08-17 17:42:51.417998211 +0200
+    @@ -271,15 +271,15 @@
+        sleep_ms(200);
+        // timestamp mode
+        if(s->device_timestamp_mode == 1) {
+    -       if(edvs_device_write_str(dh, "!E1\n") != 0)
+    +       if(edvs_device_write_str(dh, "!E2\n") != 0)
+                return 0;
+        }
+        else if(s->device_timestamp_mode == 2) {
+    -       if(edvs_device_write_str(dh, "!E2\n") != 0)
+    +       if(edvs_device_write_str(dh, "!E3\n") != 0)
+                return 0;
+        }
+        else if(s->device_timestamp_mode == 3) {
+    -       if(edvs_device_write_str(dh, "!E3\n") != 0)
+    +       if(edvs_device_write_str(dh, "!E4\n") != 0)
+                return 0;
+        }
+        else {
+
+Save to a file '/tmp/diffs.patch' and apply with
+
+    cd ~/git/edvstools
+    patch -p0 < /tmp/diffs.patch
+
 ## URI format
 
 Most edvs tools use a URI to indicate how the edvs device/file should be opened. The URI has the basic format `LINK?OPT1=VAL1&OPT2=VAL2&...&OPTn=VALn`
