@@ -25,4 +25,4 @@ add_subdirectory(aux/Terminal)
 add_subdirectory(aux/Examples)
 add_subdirectory(aux/EventViewer)
 
-add_subdirectory(aux/MathLink)
+#add_subdirectory(aux/MathLink)
