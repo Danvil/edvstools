@@ -266,7 +266,7 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	if(vm.count("colored")) {
+	if(p_colored) {
 		// read events
 		auto events = LoadColoredEvents(p_fn);
 		std::cout << "Read " << events.size() << " events" << std::endl;
