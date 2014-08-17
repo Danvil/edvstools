@@ -1,6 +1,6 @@
 #include "WdgtEventViewer.h"
 #include "WdgtCameraParameters.h"
-#include "../ConvertEvents/LoadSaveEvents.hpp"
+#include "../../tools/ConvertEvents/LoadSaveEvents.hpp"
 #include <QtGui/QFileDialog>
 #include <QtGui/QPainter>
 #include <boost/format.hpp>

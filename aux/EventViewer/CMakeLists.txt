@@ -13,7 +13,7 @@ SET(EventViewer_SOURCES
 	main.cpp
 	WdgtEventViewer.cpp
 	WdgtCameraParameters.cpp
-	../ConvertEvents/LoadSaveEvents.cpp
+	../../tools/ConvertEvents/LoadSaveEvents.cpp
 )
 SET(EventViewer_HEADERS
 	WdgtEventViewer.h
