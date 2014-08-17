@@ -1,5 +1,7 @@
 # edvstools
 
+*Copyright 2012-2014 by David Weikersdorfer*
+
 This library is a collection of tools for the embedded Dynamic Vision Sensor [eDVS](http://www.nst.ei.tum.de/projekte/edvs/). The Dynamic Vision Sensor also known as [siliconretina](http://siliconretina.ini.uzh.ch/wiki/index.php) is a asynchronous event-based vision sensor developed at the University of Zurich.
 
 **Tools / Libraries**
@@ -230,8 +232,8 @@ Contact me on [GitHub](https://github.com/Danvil/)
 
 ## License
 
-asp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+edvstools is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
-asp is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+edvstools is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License along with asp. If not, see [www.gnu.org/licenses](http://www.gnu.org/licenses/).
