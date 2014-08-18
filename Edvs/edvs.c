@@ -880,8 +880,8 @@ int parse_uri_net(const char* curi, char** ip, int* port, int* dtsm, int* htsm, 
 	// default
 	*ip = NULL;
 	*port = 0;
-	*dtsm = 1;
-	*htsm = 0;
+	*dtsm = 2;
+	*htsm = 1;
 	*msmode = 0;
 	// local copy of uri
 	char* uri = malloc(strlen(curi)+1);
@@ -932,8 +932,8 @@ int parse_uri_device(const char* curi, char** name, int* baudrate, int* dtsm, in
 	// default
 	*name = NULL;
 	*baudrate = 4000000;
-	*dtsm = 1;
-	*htsm = 0;
+	*dtsm = 2;
+	*htsm = 1;
 	*msmode = 0;
 	// local copy of uri
 	char* uri = malloc(strlen(curi)+1);

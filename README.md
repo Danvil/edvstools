@@ -143,15 +143,15 @@ instead of
 
 Format: `DEVICE?baudrate=BAUD&dtsm=DTSM&htsm=HTSM&msmode=MSM`
 * DEVICE -- path to device, i.e. /dev/ttyUSB0
-* BAUD -- serial port baudrate, i.e. 4000000 (default is 4000000)
+* BAUD -- serial port baudrate, i.e. 4000000 (*default is 4000000*)
 * DTSM -- device timestamp mode
  * 0: no timestamps (sends `!E0`)
- * 1: 16-bit timestamps (sends `!E1`) (*default*)
- * 2: 24-bit timestamps (sends `!E2`)
+ * 1: 16-bit timestamps (sends `!E1`)
+ * 2: 24-bit timestamps (sends `!E2`) (*default*)
  * 3: 32-bit timestamps (sends `!E3`)
 * HTSM -- host timestamp mode
- * 0: use raw timestamps from device (*default*)
- * 1: unwrap timestamps to guarantee monotonic increasing timestamps
+ * 0: use raw timestamps from device
+ * 1: unwrap timestamps to guarantee monotonic increasing timestamps (*default*)
  * 2: (experimental) use a combination of system time and device timestamps
 * MSM -- master slave mode
  * 0: disable master/slave mode (*default*)
