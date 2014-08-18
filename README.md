@@ -14,12 +14,12 @@ This library is a collection of tools for the embedded Dynamic Vision Sensor [eD
 
 ## Installation
 
-edvstools is was tested under Ubuntu 14.04 with GCC 4.8.x. It should also run with older version.
+edvstools was tested under Ubuntu 14.04 with GCC 4.8.x. It should also run with older versions.
 
 ### Requirements
 
 * Build essential: `sudo apt-get install build-essential g++ cmake cmake-qt-gui`
-* [Boost](http://www.boost.org/) 1.46.1 or higher: `sudo apt-get install libboost-all-dev`
+* [Boost](http://www.boost.org/) 1.48 or higher: `sudo apt-get install libboost-all-dev`
 * [Eigen](http://eigen.tuxfamily.org) 3.x: `sudo apt-get install libeigen3-dev`
 * [Qt](http://qt.nokia.com/) 4.x: `sudo apt-get install libqt4-dev`
 
@@ -45,9 +45,13 @@ Same but use 24 bit timestamps instead of 16 bit timestamps
 
 	bin/ShowEvents --uri /dev/ttyUSB0?baudrate=4000000\&dtsm=2
 
+Open two edvs streams using master/slave mode
+
+	bin/ShowEvents --uri /dev/ttyUSB0?baudrate=4000000\&msmode=1 /dev/ttyUSB1?baudrate=4000000\&msmode=2
+
 To replay an previously saved event file
 
-	bin/ShowEvents --uri /path/to/events
+	bin/ShowEvents --uri /path/to/eventfile
 
 To connect to the eDVS sensor over network and display events
 
@@ -55,9 +59,9 @@ To connect to the eDVS sensor over network and display events
 
 ### Convert files from binary into TSV format
 
-ShowEvents saves events in a binary file format to create smaller files and to be able to save and load quicker. If a more readable TSV text file is required for an external program, the tool ConvertEvents can be used to convert files.
+ShowEvents saves events in a binary file format to create smaller files which can be saved and loaded quicker. If an ASCII text file is required for an external program, the tool ConvertEvents can be used to convert binary event files into TSV text files.
 
-    bin/ConvertEvents --in /path/to/file --out /path/to/file.tsv
+    bin/ConvertEvents --in /path/to/eventfile --out /path/to/eventfile.tsv
 
 Try `bin/ConvertEvents --h` for more options.
 
@@ -66,9 +70,9 @@ Try `bin/ConvertEvents --h` for more options.
 edvstools comes with the tool EventVideoGenerator which can create videos for a recorded event file. EventVideoGenerator only works with binary event files.
 
     mkdir /tmp/eventvideo
-    bin/EventVideoGenerator --fn /path/to/file --dir /tmp/eventvideo
+    bin/EventVideoGenerator --fn /path/to/eventfile --dir /tmp/eventvideo
 
-This writes the video frames as PNG images to the specified directory. To create the video do as indicated on the command line and execute:
+This writes all video frames as PNG images to the specified directory. To create the video proceed as indicated in the program output and execute for example:
 
     cd /tmp/eventvideo/
     mogrify -format jpg *.png
@@ -80,15 +84,16 @@ Try `bin/EventVideoGenerator --h` for more options.
 
 ## Troubleshooting
 
-#### I can not display event files
+#### I can not open event files
 
-Event files are a binary dump. Use ConvertEvents to generate a TSV file.
+Event files are binary files. Use ConvertEvents to generate a TSV file. The binary file format is simply a binary dump of an array of edvs_event_t.
 
-#### I can not get correct timestamps
+#### I do not get correct timestamps
 
-Make sure you use the correct URI option dtsm (see URI format below). Make sure you escape the `&` sign as `\&` when entered in a linux terminal!
+Make sure you use the correct URI option dtsm (see URI format below).
+Make sure you escape the `&` sign as `\&` when entered in a linux terminal!
 
-#### I get a lot of "Error in high bit! Skipping a byte"
+#### I get "Error in high bit! Skipping a byte" and my events look strange
 
 Make sure that your edvs firmware uses the expected event file format. The current version of libEdvs expects the format `1yyyyyyy pxxxxxxx` (the test bit is 1!). See Edvs/edvs.c at line 549.
 
@@ -123,8 +128,8 @@ Save to a file '/tmp/diffs.patch' and apply with
 
 ## URI format
 
-Most edvs tools use a URI to indicate how the edvs device/file should be opened. The URI has the basic format `LINK?OPT1=VAL1&OPT2=VAL2&...&OPTn=VALn`
-There are tree URI types -- serial port, file, network -- explained in the following.
+Most edvs tools use an [URI](http://en.wikipedia.org/wiki/URI_scheme) to indicate how the edvs device/file should be opened. An edvs URI has the format `LINK?OPT1=VAL1&OPT2=VAL2&...&OPTn=VALn`. Key/value pairs after the `?` are optional.
+There are tree edvs URI types -- serial port, file, network -- explained in the following.
 
 **Important note:** The `&` character needs to be escaped as `\&` when entered at a linux terminal. So you have to type
 
@@ -141,7 +146,7 @@ Format: `DEVICE?baudrate=BAUD&dtsm=DTSM&htsm=HTSM&msmode=MSM`
 * BAUD -- serial port baudrate, i.e. 4000000 (default is 4000000)
 * DTSM -- device timestamp mode
  * 0: no timestamps (sends `!E0`)
- * 1: 16-bit timestamps (sends `!E1`)  (*default*)
+ * 1: 16-bit timestamps (sends `!E1`) (*default*)
  * 2: 24-bit timestamps (sends `!E2`)
  * 3: 32-bit timestamps (sends `!E3`)
 * HTSM -- host timestamp mode
@@ -153,6 +158,9 @@ Format: `DEVICE?baudrate=BAUD&dtsm=DTSM&htsm=HTSM&msmode=MSM`
  * 1: operate as master (sends `!ETM0` and later `!ETM+`)
  * 2: operate as slave (sends `!ETS`)
 
+Example: `/dev/ttyUSB0?baudrate=4000000\&dtsm=2\&htsm=1\&msmode=0`
+
+
 ### File
 
 Format: `PATH?dt=DT&ts=TS`
@@ -162,12 +170,16 @@ Format: `PATH?dt=DT&ts=TS`
   * >0 -- fixed amount of DT is added; useful when events are processed much slower than they are captured
 * TS -- only if DT=0: scales the elapsed delta system time by the specified value (*default is 1.0*)
 
+Example: `/path/to/eventfile?dt=0\&ts=0.5`
+
 ### Network
 
 Format: `IP:PORT?dtsm=DTSM&htsm=HTSM&msmode=MSM`
 * IP -- network ip of edvs
 * PORT --- network port number of edvs
 * DTSM, HTSM and MSM identical to the serial port options
+
+Example: `192.168.201.62:56000?baudrate=4000000\&dtsm=2\&htsm=1\&msmode=0`
 
 ## Code examples
 
@@ -182,7 +194,7 @@ The following sample demonstrates how to open and event stream and read events u
 	{
 		// open stream (use first command line parameter as URI)
 		std::shared_ptr<Edvs::IEventStream> stream = Edvs::OpenEventStream(argv[1]);
-		// capture events (run until EOS or Ctrl+C)
+		// capture events (run until end of file or Ctrl+C)
 		while(!stream->eos()) {
 			// read events from stream
 			auto events = stream->read();
