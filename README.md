@@ -41,9 +41,9 @@ To connect to the eDVS sensor over serial port and display events
 
 	bin/ShowEvents --uri /dev/ttyUSB0?baudrate=4000000
 
-Same but use 24 bit timestamps instead of 16 bit timestamps
+Use raw 16 bit timestamps instead of unwrapped 24 bit timestamps
 
-	bin/ShowEvents --uri /dev/ttyUSB0?baudrate=4000000\&dtsm=2
+	bin/ShowEvents --uri /dev/ttyUSB0?baudrate=4000000\&dtsm=1\&htsm=0
 
 Open two edvs streams using master/slave mode
 
