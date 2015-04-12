@@ -157,7 +157,7 @@ std::vector<Event> LoadEventsTable(const std::string& filename, char separator)
 			line.erase(line.size() - 1, 1);
 		}
 		// parse line
-		boost::split(tokens, line, boost::is_any_of("\t"));
+		boost::split(tokens, line, boost::is_any_of(separators));
 		e.t = boost::lexical_cast<uint64_t>(tokens[0]);
 		e.x = boost::lexical_cast<uint16_t>(tokens[1]);
 		e.y = boost::lexical_cast<uint16_t>(tokens[2]);
